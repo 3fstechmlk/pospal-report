@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sales Report · 3FS Technology</title>
+<link rel="stylesheet" href="/datepicker.css?v=5">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--or:#f60;--dk:#18181b;--gy:#71717a;--bd:#e4e4e7;--bg:#fafafa;--wh:#fff;--re:#dc2626}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;background:var(--bg);color:var(--dk)}
+
+.topbar{background:var(--dk);height:52px;display:flex;align-items:center;padding:0 24px;gap:16px}
+.brand{font-weight:700;font-size:15px;color:var(--or);letter-spacing:.5px}
+.merchant-name{color:#e4e4e7;font-size:13px;font-weight:500}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.btn-logout{background:none;border:1px solid #3f3f46;border-radius:6px;color:#a1a1aa;font-size:12px;padding:5px 12px;cursor:pointer;transition:color .15s,border-color .15s}
+.btn-logout:hover{color:#fff;border-color:#71717a}
+.nav-link{color:#a1a1aa;font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:6px;transition:color .15s,background .15s}
+.nav-link:hover{color:#fff;background:rgba(255,255,255,.08)}
+.nav-link.active{color:#fff;background:rgba(255,102,0,.25)}
+
+.page{padding:20px 24px;max-width:1500px;margin:0 auto}
+
+.fbar{background:var(--wh);border:1px solid var(--bd);border-radius:8px;padding:12px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.fbar label{font-weight:600;color:var(--gy);font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.btn{border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-p{background:var(--or);color:#fff}.btn-p:hover:not(:disabled){opacity:.87}
+.btn-g{background:none;border:1px solid var(--bd);color:var(--gy)}.btn-g:hover{border-color:#aaa;color:var(--dk)}
+
+/* ── Export dropdown buttons ── */
+.btn-dl-ac{background:#00A651;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.btn-dl-ac:hover:not(:disabled){opacity:.85}
+.btn-dl-ac:disabled{opacity:.4;cursor:not-allowed}
+.btn-dl-sql{background:#0e7490;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.btn-dl-sql:hover:not(:disabled){opacity:.85}
+.btn-dl-sql:disabled{opacity:.4;cursor:not-allowed}
+.ac-wrap{position:relative;display:inline-block}
+.ac-menu{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--bd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:180px;z-index:100;display:none;overflow:hidden}
+.ac-menu.open{display:block}
+.ac-menu-item{padding:10px 16px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;transition:background .1s}
+.ac-menu-item:hover{background:#fff8f3}
+.ac-menu-item .mi-icon{font-size:15px}
+.ac-menu-item .mi-sub{font-size:11px;color:var(--gy);display:block;font-weight:400}
+.badge-row{margin-left:auto;display:flex;gap:8px;align-items:center}
+.cbadge{font-size:11px;padding:3px 9px;border-radius:10px;background:#ede9fe;color:#5b21b6}
+
+.stats{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.sc{flex:1;min-width:140px;background:var(--wh);border:1px solid var(--bd);border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sc .lbl{font-size:10px;color:var(--gy);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.sc .val{font-size:18px;font-weight:700;margin-top:4px}
+.sc .val.or{color:var(--or)}
+.sc .sub{font-size:11px;color:var(--gy);margin-top:2px}
+
+.tc{background:var(--wh);border:1px solid var(--bd);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.tc-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bd);flex-wrap:wrap;gap:8px}
+.tc-head h2{font-size:14px;font-weight:700}
+.tc-head .sub{font-size:12px;color:var(--gy)}
+.sw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:1200px;font-size:12.5px}
+thead th{background:var(--or);color:#fff;padding:9px 12px;text-align:right;white-space:nowrap;font-size:11.5px;font-weight:600;border-right:1px solid rgba(255,255,255,.15)}
+thead th:first-child{text-align:left}
+thead th:nth-child(2){text-align:center}
+thead th:last-child{border-right:0}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s}
+tbody tr:hover{background:#fff8f3}
+td{padding:9px 12px;text-align:right;white-space:nowrap}
+td:first-child{text-align:left;color:var(--gy)}
+td:nth-child(2){text-align:center;font-weight:500}
+.tot td{background:#fff7ed;font-weight:700;border-top:2px solid var(--or)}
+.tot td:first-child{color:var(--or)}
+.neg{color:var(--re)}
+.zero{color:#c4c4c8}
+
+.sv{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;color:var(--gy);gap:12px;text-align:center}
+.sv p{font-size:14px}
+.sv small{font-size:12px;color:#a1a1aa}
+.spin{width:34px;height:34px;border:3px solid var(--bd);border-top-color:var(--or);border-radius:50%;animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+.err{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;color:var(--re);margin-bottom:14px;font-size:13px;display:none}
+
+/* ── Member QR tier chips ── */
+.mq-chip{border:1.5px solid var(--bd);border-radius:99px;padding:3px 12px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--gy);transition:all .15s}
+.mq-chip:hover{border-color:#aaa;color:var(--dk)}
+.mq-chip.active{background:var(--or);border-color:var(--or);color:#fff}
+
+/* ── Clear Cache password modal ── */
+.cc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center}
+.cc-overlay.show{display:flex}
+.cc-modal{background:#fff;border-radius:10px;width:340px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.cc-modal h3{font-size:15px;font-weight:700;margin-bottom:6px}
+.cc-modal p{font-size:12px;color:var(--gy);margin-bottom:16px}
+.cc-modal input{width:100%;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:13px;outline:none;margin-bottom:6px}
+.cc-modal input:focus{border-color:var(--or);box-shadow:0 0 0 2px rgba(255,102,0,.15)}
+.cc-err{font-size:12px;color:var(--re);min-height:16px;margin-bottom:10px}
+.cc-foot{display:flex;gap:8px;justify-content:flex-end}
+
+/* ── AR Invoice settings modal ── */
+.ar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center}
+.ar-overlay.show{display:flex}
+.ar-modal{background:#fff;border-radius:10px;width:360px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.ar-modal h3{font-size:15px;font-weight:700;margin-bottom:4px}
+.ar-modal .ar-sub{font-size:12px;color:var(--gy);margin-bottom:18px}
+.ar-field{margin-bottom:12px}
+.ar-field label{display:block;font-size:11px;font-weight:700;color:var(--gy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.ar-field input{width:100%;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:13px;outline:none}
+.ar-field input:focus{border-color:var(--or);box-shadow:0 0 0 2px rgba(255,102,0,.15)}
+.ar-hint{font-size:11px;color:#a1a1aa;margin-top:3px}
+.ar-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+
+/* ── Journal Entry settings modal ── */
+.je-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center}
+.je-overlay.show{display:flex}
+.je-modal{background:#fff;border-radius:10px;width:380px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.je-modal.wide{width:440px}
+.je-modal h3{font-size:15px;font-weight:700}
+.je-modal .je-sub{font-size:12px;color:var(--gy);margin-bottom:18px;margin-top:4px}
+.je-field{margin-bottom:12px}
+.je-field label{display:block;font-size:11px;font-weight:700;color:var(--gy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.je-field input{width:100%;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:13px;outline:none}
+.je-field input:focus{border-color:var(--or);box-shadow:0 0 0 2px rgba(255,102,0,.15)}
+.je-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.je-adv-btn{font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--bd);background:#fff;cursor:pointer;color:var(--gy);font-weight:600;transition:background .15s,color .15s}
+.je-adv-btn.on{background:var(--or);color:#fff;border-color:var(--or)}
+.je-adv-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.je-adv-row .je-adv-name{flex:1;font-size:12px;color:var(--dk);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.je-adv-row input{width:110px;flex-shrink:0;border:1px solid var(--bd);border-radius:6px;padding:5px 8px;font-size:12px;font-family:monospace;outline:none}
+.je-adv-row input:focus{border-color:var(--or);box-shadow:0 0 0 2px rgba(255,102,0,.15)}
+.je-adv-loading{text-align:center;color:var(--gy);font-size:12px;padding:12px 0}
+.je-adv-hdr{display:flex;font-size:10px;font-weight:700;color:var(--gy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.je-adv-hdr span:first-child{flex:1}
+.je-adv-hdr span:last-child{width:110px;flex-shrink:0}
+
+/* ── Refund warning modal ── */
+.rw-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:center;justify-content:center}
+.rw-overlay.show{display:flex}
+.rw-modal{background:#fff;border-radius:10px;width:420px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.rw-modal h3{font-size:15px;font-weight:700;margin-bottom:6px;color:#b45309}
+.rw-modal .rw-sub{font-size:12px;color:var(--gy);margin-bottom:14px}
+.rw-list{background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:10px 12px;margin-bottom:14px;max-height:160px;overflow-y:auto}
+.rw-list .rw-row{font-size:12px;font-family:monospace;padding:3px 0 1px;color:#78350f;font-weight:600}
+.rw-list .rw-item{font-size:11px;font-family:monospace;padding:1px 0 1px 10px;color:#92400e}
+.rw-note{font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:10px 12px;margin-bottom:18px;line-height:1.5}
+.rw-foot{display:flex;gap:8px;justify-content:flex-end}
+
+/* ── Sales Invoice settings modal ── */
+.si-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center}
+.si-overlay.show{display:flex}
+.si-modal{background:#fff;border-radius:10px;width:360px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.si-modal h3{font-size:15px;font-weight:700;margin-bottom:4px}
+.si-modal .si-sub{font-size:12px;color:var(--gy);margin-bottom:18px}
+.si-field{margin-bottom:12px}
+.si-field label{display:block;font-size:11px;font-weight:700;color:var(--gy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.si-field input{width:100%;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:13px;outline:none}
+.si-field input:focus{border-color:var(--or);box-shadow:0 0 0 2px rgba(255,102,0,.15)}
+.si-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="brand">3FS TECHNOLOGY</div>
+  <div class="merchant-name" id="merchantName"></div>
+  <div class="topbar-right">
+    <a href="/report" class="nav-link active">Sales Report</a>
+    <a href="/payment" class="nav-link">Payment Report</a>
+    <a href="/orders" class="nav-link">Transactions</a>
+    <span id="versionBadge" style="font-size:11px;color:#52525b;background:#27272a;padding:3px 8px;border-radius:4px"></span>
+    <button id="btnMemberQr" onclick="openMemberQr()" style="display:none;background:var(--or);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer">Member QR</button>
+    <button class="btn-logout" onclick="doLogout()">Log Out</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="fbar">
+    <label>From</label><input type="date" id="s">
+    <label>To</label><input type="date" id="e">
+    <button class="btn btn-p" id="bLoad" onclick="load()">Load Report</button>
+    <button class="btn btn-g" onclick="clearCache()">Clear Cache</button>
+    <button class="btn btn-g" id="bExport" onclick="doExport()" disabled>⬇ Export</button>
+    <div class="ac-wrap" id="acWrap">
+      <button class="btn-dl-ac" id="bDlAC" onclick="toggleAcMenu(event)" disabled><span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:#007A3D;border-radius:3px;font-size:9px;font-weight:800;margin-right:5px;letter-spacing:-.5px;color:#fff">AC</span>⬇ AutoCount ▾</button>
+      <div class="ac-menu" id="acMenu">
+        <div class="ac-menu-item" onclick="closeAcMenu();downloadAR('autocount')">
+          <span class="mi-icon">📄</span>
+          <span>AR Invoice<span class="mi-sub">Per ticket line items</span></span>
+        </div>
+        <div class="ac-menu-item" onclick="closeAcMenu();downloadJE()">
+          <span class="mi-icon">📒</span>
+          <span>Journal Entry<span class="mi-sub">Daily cash / bank summary</span></span>
+        </div>
+        <div class="ac-menu-item" onclick="closeAcMenu();downloadSI()">
+          <span class="mi-icon">🧾</span>
+          <span>Sales Invoice<span class="mi-sub">Per ticket line items</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="ac-wrap" id="sqlWrap">
+      <button class="btn-dl-sql" id="bDlSQL" onclick="toggleSqlMenu(event)" disabled><span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:#6B21A8;border-radius:3px;font-size:9px;font-weight:800;margin-right:5px;color:#fff">SQL</span>⬇ SQL Accounting ▾</button>
+      <div class="ac-menu" id="sqlMenu">
+        <div class="ac-menu-item" onclick="closeSqlMenu();downloadAR('sql_customer')">
+          <span class="mi-icon">📄</span>
+          <span>AR Invoice<span class="mi-sub">Per ticket line items</span></span>
+        </div>
+        <div class="ac-menu-item" onclick="closeSqlMenu();downloadJE('sql_journal')">
+          <span class="mi-icon">📒</span>
+          <span>Journal Entry<span class="mi-sub">Daily cash / bank summary</span></span>
+        </div>
+        <div class="ac-menu-item" onclick="closeSqlMenu();downloadSI('sql_sales')">
+          <span class="mi-icon">🧾</span>
+          <span>Sales Invoice<span class="mi-sub">Per ticket line items</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="badge-row">
+      <span class="cbadge" id="cBadge" style="display:none"></span>
+      <span id="quotaMeter"></span>
+    </div>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div class="stats" id="stats" style="display:none">
+    <div class="sc"><div class="lbl">Days</div><div class="val" id="vDays">–</div><div class="sub">in selected range</div></div>
+    <div class="sc"><div class="lbl">Transactions</div><div class="val" id="vTx">–</div><div class="sub">total tickets</div></div>
+    <div class="sc"><div class="lbl">Gross Sales</div><div class="val or" id="vGross">–</div><div class="sub">before discount</div></div>
+    <div class="sc"><div class="lbl">Net Total</div><div class="val or" id="vNet">–</div><div class="sub">all inclusive</div></div>
+    <div class="sc"><div class="lbl">Discount</div><div class="val" id="vDisc">–</div><div class="sub" id="vDiscPct"></div></div>
+    <div class="sc"><div class="lbl">Tax Collected</div><div class="val" id="vTax">–</div><div class="sub">SST</div></div>
+  </div>
+
+  <div class="tc">
+    <div class="tc-head">
+      <h2 id="tcTitle">Daily Sales Breakdown</h2>
+      <span class="sub" id="rng"></span>
+    </div>
+    <div class="sv" id="svEmpty" style="display:none">
+      <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" opacity=".3"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <p>No transactions found for this period.</p>
+    </div>
+    <div class="sv" id="svLoad">
+      <div class="spin"></div>
+      <p id="ldMsg">Fetching from Pospal…</p>
+      <small>This may take a moment for large date ranges</small>
+    </div>
+    <div class="sw" id="tWrap" style="display:none">
+      <table>
+        <thead><tr>
+          <th>Business Date</th><th>Tx</th>
+          <th>Gross Sales</th><th>Discount</th><th>Bill Rounding</th>
+          <th>Net Amt Excl.</th><th>Excl. Tax</th><th>Excl. Charges</th>
+          <th>Total Sales</th><th>Gross Sales (Inclu.)</th>
+          <th>Net Sales w/ Charges</th><th>Net Total</th>
+        </tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="/datepicker.js?v=6"></script>
+<script src="/quota-meter.js?v=1"></script>
+<script>
+const TOKEN = sessionStorage.getItem('merchantToken');
+if (!TOKEN) window.location.href = '/';
+
+// ── Stale session → out ─────────────────────────────────────────────────
+// The server keeps sessions in memory, so a restart invalidates every token while
+// the string stays in sessionStorage — and the check above accepts a token merely
+// for existing.  A 401 is the only reliable signal that the session is gone, so
+// catch it in one place: checking at each call site meant most of them missed it
+// and the page sat there looking logged in until something happened to fail.
+// /login is exempt — a 401 there just means wrong password.
+(function () {
+  const raw = window.fetch.bind(window);
+  let gone = false;
+  window.fetch = async (...args) => {
+    const res = await raw(...args);
+    if (res.status === 401 && !gone && !String(args[0] || '').includes('/login')) {
+      gone = true;            // one logout even when several requests fail at once
+      doLogout();
+    }
+    return res;
+  };
+})();
+fetch('/api/version').then(r=>r.json()).then(d=>{const el=document.getElementById('versionBadge');if(el)el.textContent='v'+d.version;}).catch(()=>{});
+
+const f = n => {
+  if (n == null) return '<span class="zero">–</span>';
+  const v = parseFloat(n);
+  if (v === 0) return '<span class="zero">0.00</span>';
+  const s = Math.abs(v).toFixed(2);
+  return v < 0 ? `<span class="neg">(${s})</span>` : s;
+};
+const fd  = d => { const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; };
+const fm  = n => parseFloat(n).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
+const hdr = () => ({'Authorization': 'Bearer ' + TOKEN});
+
+function makeRow(r, tot) {
+  const c = tot ? ' class="tot"' : '';
+  return `<tr${c}><td>${tot ? 'TOTAL' : fd(r.date)}</td><td>${r.txCount}</td>
+    <td>${f(r.crossSales)}</td><td>${f(r.discount)}</td><td>${f(r.rounding)}</td>
+    <td>${f(r.netAmountExclusive)}</td><td>${f(r.tax)}</td><td>${f(r.charges)}</td>
+    <td><strong>${f(r.totalSales)}</strong></td><td>${f(r.crossSalesInclu)}</td>
+    <td>${f(r.netSalesWithCharges)}</td><td><strong>${f(r.netTotal)}</strong></td></tr>`;
+}
+
+function state(n) {
+  document.getElementById('svEmpty').style.display = n==='e' ? '' : 'none';
+  document.getElementById('svLoad') .style.display = n==='l' ? '' : 'none';
+  document.getElementById('tWrap')  .style.display = n==='t' ? '' : 'none';
+}
+function showErr(m) { const el=document.getElementById('err'); el.textContent='⚠ '+m; el.style.display=''; }
+function clrErr()   { document.getElementById('err').style.display='none'; }
+
+async function load() {
+  const s = document.getElementById('s').value;
+  const e = document.getElementById('e').value;
+  if (!s||!e) return alert('Please select both dates.');
+  if (s > e)  return alert('"From" must be before "To".');
+  const days = Math.round((new Date(e)-new Date(s))/86400000)+1;
+  if (days > 31) return alert(`Selected range is ${days} days. Maximum is 31 days — please select a shorter period.`);
+  clrErr();
+  document.getElementById('stats').style.display = 'none';
+  document.getElementById('bLoad').disabled = true;
+  document.getElementById('bExport').disabled = true;
+  state('l');
+  document.getElementById('ldMsg').textContent = `Loading ${days} day${days>1?'s':''} (cached data where available)…`;
+  try {
+    const res  = await fetch(`/api/merchant/report?start=${s}&end=${e}`, {headers: hdr()});
+    if (res.status === 401) { doLogout(); return; }
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    const {rows, total} = data;
+    if (!rows.length) { state('e'); return; }
+    document.getElementById('tb').innerHTML = rows.map(r=>makeRow(r,false)).join('') + makeRow(total, true);
+    document.getElementById('rng').textContent = `${fd(s)} – ${fd(e)}`;
+    const pct = total.crossSales > 0 ? ((total.discount/total.crossSales)*100).toFixed(1)+'% of gross' : '–';
+    document.getElementById('vDays') .textContent = rows.length;
+    document.getElementById('vTx')   .textContent = total.txCount.toLocaleString();
+    document.getElementById('vGross').textContent = 'RM '+fm(total.crossSales);
+    document.getElementById('vNet')  .textContent = 'RM '+fm(total.netTotal);
+    document.getElementById('vDisc') .textContent = 'RM '+fm(total.discount);
+    document.getElementById('vDiscPct').textContent = pct;
+    document.getElementById('vTax')  .textContent = 'RM '+fm(total.tax);
+    document.getElementById('stats').style.display = '';
+    state('t');
+    document.getElementById('bExport').disabled = false;
+    document.getElementById('bDlAC').disabled  = false;
+    document.getElementById('bDlSQL').disabled = false;
+  } catch (ex) {
+    showErr(ex.message); state('e');
+    document.getElementById('bExport').disabled = true;
+    document.getElementById('bDlAC').disabled  = true;
+    document.getElementById('bDlSQL').disabled = true;
+  } finally {
+    document.getElementById('bLoad').disabled = false;
+  }
+}
+
+async function doExport() {
+  const s = document.getElementById('s').value;
+  const e = document.getElementById('e').value;
+  if (!s || !e) return;
+  const btn = document.getElementById('bExport');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const r = await fetch(`/api/merchant/report/export?start=${s}&end=${e}`, {
+      headers: {'Authorization': 'Bearer ' + TOKEN}
+    });
+    if (!r.ok) { const d = await r.json().catch(()=>({})); alert(d.error || 'Export failed'); return; }
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    const cd = r.headers.get('Content-Disposition') || '';
+    const fn = cd.match(/filename="([^"]+)"/);
+    a.download = fn ? fn[1] : `Sales_${s}_${e}.xlsx`;
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch(ex) {
+    alert('Export error: ' + ex.message);
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+function clearCache() {
+  document.getElementById('ccPw').value = '';
+  document.getElementById('ccErr').textContent = '';
+  document.getElementById('ccOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('ccPw').focus(), 80);
+}
+async function ccConfirm() {
+  const pw = document.getElementById('ccPw').value;
+  if (pw !== 'Aabm9901') { document.getElementById('ccErr').textContent = 'Wrong password.'; return; }
+  ccClose();
+  await fetch('/api/cache/clear', {method:'POST', headers: hdr()});
+  alert('Cache cleared. Next load will re-fetch from Pospal.');
+}
+function ccClose() { document.getElementById('ccOverlay').classList.remove('show'); }
+
+// The quota badge + ↻ live in /quota-meter.js so all three merchant pages behave
+// identically: first click shows what's already in memory, a second click spends a
+// call to read the real figure.  cBadge is this page's own, fed from the same reply.
+QuotaMeter.mount({
+  into   : document.getElementById('quotaMeter'),
+  headers: hdr,
+  onData : d => {
+    const cBadge = document.getElementById('cBadge');
+    if (d.cachedDays > 0) { cBadge.textContent = `${d.cachedDays} days cached`; cBadge.style.display = ''; }
+  }
+});
+
+function doLogout() {
+  sessionStorage.removeItem('merchantToken');
+  sessionStorage.removeItem('merchantName');
+  window.location.href = '/';
+}
+
+// ── AR Invoice settings (localStorage per merchant) ───────────────
+const AR_SETTINGS_KEY = 'ar_settings_' + (sessionStorage.getItem('merchantName') || 'default');
+
+function arLoadSettings() {
+  try { return JSON.parse(localStorage.getItem(AR_SETTINGS_KEY)) || {}; } catch { return {}; }
+}
+function arSaveSettings(s) {
+  localStorage.setItem(AR_SETTINGS_KEY, JSON.stringify(s));
+}
+
+let _arFmt = 'autocount';
+let _rwOnProceed = null;   // callback after user confirms refund warning
+let _rwRefunds   = [];     // full refund list for CSV download
+
+// ── Refund warning check ───────────────────────────────────────────
+async function checkRefundsThen(callback, software) {
+  const s = document.getElementById('s').value;
+  const e = document.getElementById('e').value;
+  try {
+    const res = await fetch(`/api/merchant/check-refunds?start=${s}&end=${e}`, {headers: hdr()});
+    if (res.status === 401) { doLogout(); return; }
+    const d = await res.json();
+    if (d.ok && d.count > 0) {
+      _rwOnProceed = callback;
+      _rwRefunds   = d.refunds;
+      document.getElementById('rwSoftware').textContent = software || 'AutoCount';
+      const list = document.getElementById('rwList');
+      const shown = d.refunds.slice(0, 15);
+      list.innerHTML = shown.map(r => {
+        const itemLines = (r.items || []).map(it =>
+          `<div class="rw-item">↳ ${it.name} &nbsp;×&nbsp; ${it.qty % 1 === 0 ? it.qty : it.qty.toFixed(2)}</div>`
+        ).join('');
+        return `<div class="rw-row">SN: ${r.sn} &nbsp;|&nbsp; ${r.date} &nbsp;|&nbsp; RM ${r.amount.toFixed(2)}</div>${itemLines}`;
+      }).join('') + (d.count > 15 ? `<div class="rw-row" style="color:#a1a1aa">… and ${d.count - 15} more</div>` : '');
+      document.getElementById('rwCount').textContent = d.count;
+      document.getElementById('rwOverlay').classList.add('show');
+      return;
+    }
+  } catch { /* network error — proceed anyway */ }
+  callback();
+}
+
+function rwProceed() {
+  document.getElementById('rwOverlay').classList.remove('show');
+  if (_rwOnProceed) { _rwOnProceed(); _rwOnProceed = null; }
+}
+function rwClose() {
+  document.getElementById('rwOverlay').classList.remove('show');
+  _rwOnProceed = null;
+}
+
+function rwDownload() {
+  const s = document.getElementById('s').value;
+  const e = document.getElementById('e').value;
+  const rows = [['SN', 'Date', 'Amount (RM)', 'Item', 'Qty']];
+  for (const r of _rwRefunds) {
+    if (!r.items || r.items.length === 0) {
+      rows.push([r.sn, r.date, r.amount.toFixed(2), '', '']);
+    } else {
+      for (const it of r.items) {
+        rows.push([r.sn, r.date, r.amount.toFixed(2), it.name, it.qty % 1 === 0 ? it.qty : it.qty.toFixed(2)]);
+      }
+    }
+  }
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Refund_List_${s}_to_${e}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadAR(fmt) {
+  const s = document.getElementById('s').value;
+  const e = document.getElementById('e').value;
+  if (!s || !e) return alert('Please select a date range first.');
+  _arFmt = fmt;
+  const isSqlAr = fmt.startsWith('sql');
+  checkRefundsThen(() => {
+    // SQL template uses "Code"; AutoCount uses "Debtor Code"
+    document.getElementById('arDebtorCodeLabel').textContent = isSqlAr ? 'Code' : 'Debtor Code';
+
+    const saved = arLoadSettings();
+    document.getElementById('arDebtorCode').value    = saved.debtorCode    || '300-0000';
+    document.getElementById('arAccNo').value         = saved.accNo         || '500-1000';
+    document.getElementById('arCOD').value           = saved.cod           || 'C.O.D.';
+    document.getElementById('arInclusiveTax').value  = saved.inclusiveTax  || 'F';
+    document.getElementById('arOverlay').classList.add('show');
+    setTimeout(() => document.getElementById('arDebtorCode').focus(), 80);
+  }, isSqlAr ? 'SQL Accounting' : 'AutoCount');
+}
+
+async function arConfirm() {
+  const debtorCode    = document.getElementById('arDebtorCode').value.trim()   || '300-0000';
+  const accNo         = document.getElementById('arAccNo').value.trim()         || '500-1000';
+  const cod           = document.getElementById('arCOD').value.trim()           || 'C.O.D.';
+  const inclusiveTax  = document.getElementById('arInclusiveTax').value         || 'F';
+  // Save settings for next time
+  arSaveSettings({ debtorCode, accNo, cod, inclusiveTax });
+  arClose();
+
+  const s   = document.getElementById('s').value;
+  const e   = document.getElementById('e').value;
+  const fmt = _arFmt;
+  const isSql = fmt.startsWith('sql');
+  const btn = isSql ? document.getElementById('bDlSQL') : document.getElementById('bDlAC');
+  const origText = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  try {
+    const url = `/api/merchant/export-ar?start=${s}&end=${e}&format=${fmt}`
+      + `&debtorCode=${encodeURIComponent(debtorCode)}`
+      + `&accNo=${encodeURIComponent(accNo)}`
+      + `&cod=${encodeURIComponent(cod)}`
+      + `&inclusiveTax=${encodeURIComponent(inclusiveTax)}`;
+    const res = await fetch(url, {headers: hdr()});
+    if (res.status === 401) { doLogout(); return; }
+    if (!res.ok) {
+      const d = await res.json().catch(()=>({error:'Server error'}));
+      alert('Export failed: ' + (d.error || res.status)); return;
+    }
+    const blob  = await res.blob();
+    const aEl   = document.createElement('a');
+    const prefix = isSql ? 'SQL_Customer_Invoice' : 'AR_Invoice';
+    aEl.href     = URL.createObjectURL(blob);
+    aEl.download = `${prefix}_${s}_to_${e}.xlsx`;
+    aEl.click();
+    URL.revokeObjectURL(aEl.href);
+  } catch (ex) {
+    alert('Export error: ' + ex.message);
+  } finally {
+    btn.disabled = false; btn.textContent = origText;
+  }
+}
+function arClose() { document.getElementById('arOverlay').classList.remove('show'); }
+
+// ── AutoCount / SQL dropdowns ──────────────────────────────────────
+function toggleAcMenu(e) {
+  e.stopPropagation(); closeSqlMenu();
+  document.getElementById('acMenu').classList.toggle('open');
+}
+function closeAcMenu() { document.getElementById('acMenu').classList.remove('open'); }
+
+function toggleSqlMenu(e) {
+  e.stopPropagation(); closeAcMenu();
+  document.getElementById('sqlMenu').classList.toggle('open');
+}
+function closeSqlMenu() { document.getElementById('sqlMenu').classList.remove('open'); }
+
+document.addEventListener('click', () => { closeAcMenu(); closeSqlMenu(); });
+
+// ── Journal Entry settings ─────────────────────────────────────────
+const JE_SETTINGS_KEY = 'je_settings_' + (sessionStorage.getItem('merchantName') || 'default');
+function jeLoadSettings() {
+  try { return JSON.parse(localStorage.getItem(JE_SETTINGS_KEY)) || {}; } catch { return {}; }
+}
+function jeSaveSettings(s) { localStorage.setItem(JE_SETTINGS_KEY, JSON.stringify(s)); }
+
+let _jeFmt = 'journal';
+let _jeAdvanced = false;
+let _jePayCodes = [];  // [{code, name}]
+
+function downloadJE(fmt) {
+  const s = document.getElementById('s').value;
+  const e = document.getElementById('e').value;
+  if (!s || !e) return alert('Please select a date range first.');
+  _jeFmt = fmt || 'journal';
+  const saved = jeLoadSettings();
+  document.getElementById('jeCashAcc').value  = saved.cashAcc  || '320-0000';
+  document.getElementById('jeBankAcc').value  = saved.bankAcc  || '310-1000';
+  document.getElementById('jeSalesAcc').value = saved.salesAcc || '500-0000';
+  // Restore advanced mode state
+  _jeAdvanced = saved.advanced || false;
+  _jePayCodes = [];
+  _jeApplyAdvancedState(false);  // apply without fetching
+  if (_jeAdvanced) jeFetchPayCodes(s, e);
+  document.getElementById('jeOverlay').classList.add('show');
+  setTimeout(() => document.getElementById(_jeAdvanced ? 'jeSalesAcc' : 'jeCashAcc').focus(), 80);
+}
+
+function _jeApplyAdvancedState(fetching) {
+  const btn  = document.getElementById('jeAdvBtn');
+  const sim  = document.getElementById('jeSimpleSection');
+  const adv  = document.getElementById('jeAdvSection');
+  const modal= document.getElementById('jeModal');
+  btn.classList.toggle('on', _jeAdvanced);
+  btn.textContent = _jeAdvanced ? 'Advanced ✓' : 'Advanced';
+  sim.style.display  = _jeAdvanced ? 'none' : '';
+  adv.style.display  = _jeAdvanced ? '' : 'none';
+  modal.classList.toggle('wide', _jeAdvanced);
+  if (_jeAdvanced && fetching) {
+    document.getElementById('jeAdvLoading').style.display = '';
+    document.getElementById('jeAdvList').style.display    = 'none';
+  }
+}
+
+async function jeToggleAdvanced() {
+  _jeAdvanced = !_jeAdvanced;
+  _jeApplyAdvancedState(_jeAdvanced);
+  if (_jeAdvanced) {
+    const s = document.getElementById('s').value;
+    const e = document.getElementById('e').value;
+    await jeFetchPayCodes(s, e);
+  }
+}
+
+async function jeFetchPayCodes(start, end) {
+  document.getElementById('jeAdvLoading').style.display = '';
+  document.getElementById('jeAdvList').style.display    = 'none';
+  try {
+    const r = await fetch(`/api/merchant/journal-pay-codes?start=${start}&end=${end}`, {headers: hdr()});
+    if (r.status === 401) { doLogout(); return; }
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    _jePayCodes = d.codes || [];
+    const saved = jeLoadSettings();
+    const advMap = saved.advancedMap || {};
+    const rows = document.getElementById('jeAdvRows');
+    rows.innerHTML = '';
+    _jePayCodes.forEach(({code, name}) => {
+      const row = document.createElement('div');
+      row.className = 'je-adv-row';
+      row.innerHTML = `<span class="je-adv-name" title="${code}">${name}</span>`
+        + `<input type="text" data-code="${code}" placeholder="e.g. 310-1000" value="${advMap[code] || ''}" `
+        + `style="font-family:monospace">`;
+      rows.appendChild(row);
+    });
+    document.getElementById('jeAdvLoading').style.display = 'none';
+    document.getElementById('jeAdvList').style.display    = '';
+  } catch(ex) {
+    document.getElementById('jeAdvLoading').textContent = 'Failed to load: ' + ex.message;
+  }
+}
+
+async function jeConfirm() {
+  const salesAcc = document.getElementById('jeSalesAcc').value.trim() || '500-0000';
+  let cashAcc, bankAcc, paymentMap = null;
+
+  if (_jeAdvanced) {
+    // Build paymentMap from advanced inputs
+    paymentMap = {};
+    document.querySelectorAll('#jeAdvRows input[data-code]').forEach(inp => {
+      const v = inp.value.trim();
+      if (v) paymentMap[inp.dataset.code] = v;
+    });
+    // Save advanced state
+    jeSaveSettings({ ...jeLoadSettings(), salesAcc, advanced: true, advancedMap: paymentMap });
+    cashAcc = '320-0000'; bankAcc = '310-1000';  // fallback if a code is unmapped
+  } else {
+    cashAcc  = document.getElementById('jeCashAcc').value.trim()  || '320-0000';
+    bankAcc  = document.getElementById('jeBankAcc').value.trim()  || '310-1000';
+    jeSaveSettings({ cashAcc, bankAcc, salesAcc, advanced: false });
+  }
+  jeClose();
+
+  const s   = document.getElementById('s').value;
+  const e   = document.getElementById('e').value;
+  const isSql = _jeFmt.startsWith('sql');
+  const btn = document.getElementById(isSql ? 'bDlSQL' : 'bDlAC');
+  const origText = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  try {
+    let url = `/api/merchant/export-ar?start=${s}&end=${e}&format=${_jeFmt}`
+      + `&cashAcc=${encodeURIComponent(cashAcc)}`
+      + `&bankAcc=${encodeURIComponent(bankAcc)}`
+      + `&salesAcc=${encodeURIComponent(salesAcc)}`;
+    if (paymentMap) url += `&paymentMap=${encodeURIComponent(JSON.stringify(paymentMap))}`;
+    const res = await fetch(url, {headers: hdr()});
+    if (res.status === 401) { doLogout(); return; }
+    if (!res.ok) {
+      const d = await res.json().catch(()=>({error:'Server error'}));
+      alert('Export failed: ' + (d.error || res.status)); return;
+    }
+    const blob = await res.blob();
+    const aEl  = document.createElement('a');
+    const prefix = isSql ? 'SQL_Journal_Entry' : 'Journal_Entry';
+    aEl.href     = URL.createObjectURL(blob);
+    aEl.download = `${prefix}_${s}_to_${e}.xlsx`;
+    aEl.click();
+    URL.revokeObjectURL(aEl.href);
+  } catch (ex) {
+    alert('Export error: ' + ex.message);
+  } finally {
+    btn.disabled = false; btn.textContent = origText;
+  }
+}
+function jeClose() {
+  document.getElementById('jeOverlay').classList.remove('show');
+}
+
+// ── Sales Invoice settings ─────────────────────────────────────────
+const SI_SETTINGS_KEY = 'si_settings_' + (sessionStorage.getItem('merchantName') || 'default');
+function siLoadSettings() {
+  try { return JSON.parse(localStorage.getItem(SI_SETTINGS_KEY)) || {}; } catch { return {}; }
+}
+function siSaveSettings(s) { localStorage.setItem(SI_SETTINGS_KEY, JSON.stringify(s)); }
+
+let _siFmt = 'sales';
+
+function downloadSI(fmt) {
+  const s = document.getElementById('s').value;
+  const e = document.getElementById('e').value;
+  if (!s || !e) return alert('Please select a date range first.');
+  _siFmt = fmt || 'sales';
+  checkRefundsThen(() => {
+    const saved = siLoadSettings();
+
+    document.getElementById('siDebtorCode').value  = saved.debtorCode  || '300-0000';
+    document.getElementById('siDebtorName').value  = saved.debtorName  || 'POS SALES';
+    document.getElementById('siCOD').value         = saved.cod         || 'C.O.D.';
+    document.getElementById('siOverlay').classList.add('show');
+    setTimeout(() => document.getElementById('siDebtorCode').focus(), 80);
+  }, _siFmt.startsWith('sql') ? 'SQL Accounting' : 'AutoCount');
+}
+
+async function siConfirm() {
+  const debtorCode = document.getElementById('siDebtorCode').value.trim() || '300-0000';
+  const debtorName = document.getElementById('siDebtorName').value.trim();
+  const cod        = document.getElementById('siCOD').value.trim()        || 'C.O.D.';
+  siSaveSettings({ debtorCode, debtorName, cod });
+  siClose();
+
+  const s   = document.getElementById('s').value;
+  const e   = document.getElementById('e').value;
+  const isSql = _siFmt.startsWith('sql');
+  const btn = document.getElementById(isSql ? 'bDlSQL' : 'bDlAC');
+  const origText = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  try {
+    const url = `/api/merchant/export-ar?start=${s}&end=${e}&format=${_siFmt}`
+      + `&debtorCode=${encodeURIComponent(debtorCode)}`
+      + `&debtorName=${encodeURIComponent(debtorName)}`
+      + `&cod=${encodeURIComponent(cod)}`;
+    const res = await fetch(url, {headers: hdr()});
+    if (res.status === 401) { doLogout(); return; }
+    if (!res.ok) {
+      const d = await res.json().catch(()=>({error:'Server error'}));
+      alert('Export failed: ' + (d.error || res.status)); return;
+    }
+    const blob = await res.blob();
+    const aEl  = document.createElement('a');
+    const prefix = isSql ? 'SQL_Sales_Invoice' : 'Sales_Invoice';
+    aEl.href     = URL.createObjectURL(blob);
+    aEl.download = `${prefix}_${s}_to_${e}.xlsx`;
+    aEl.click();
+    URL.revokeObjectURL(aEl.href);
+  } catch (ex) {
+    alert('Export error: ' + ex.message);
+  } finally {
+    btn.disabled = false; btn.textContent = origText;
+  }
+}
+function siClose() { document.getElementById('siOverlay').classList.remove('show'); }
+
+// ── Date range picker
+const drp = new DateRangePicker('s', 'e', () => {});
+(function() {
+  const t   = new Date();
+  const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  // TO stops at today-2 so the whole default range is served from cache and the
+  // first load costs no Pospal API quota. FROM tracks the calendar month, so on
+  // the 1st and 2nd of a month the two cross over — fall back a whole month
+  // rather than pulling TO forward, which would drag in today's uncached data.
+  const d2 = new Date(t); d2.setDate(t.getDate()-2);
+  let f = new Date(t.getFullYear(), t.getMonth(), 1);
+  if (f > d2) f = new Date(t.getFullYear(), t.getMonth()-1, 1);
+  drp.setRange(fmt(f), fmt(d2));
+})();
+
+// Fetch merchant name in background
+(async () => {
+  try {
+    const r = await fetch('/api/merchant/me', {headers: hdr()});
+    if (!r.ok) { doLogout(); return; }
+    const d2 = await r.json();
+    document.getElementById('merchantName').textContent = d2.name;
+    document.getElementById('tcTitle').textContent = 'Daily Sales Breakdown — ' + d2.name;
+    _merchantAccount = d2.account || '';
+    if (d2.member_portal) document.getElementById('btnMemberQr').style.display = '';
+  } catch { doLogout(); }
+})();
+
+// ── Member QR modal ──────────────────────────────────────────────────────────
+let _merchantAccount = '';
+let _mqActiveTier = '';
+async function openMemberQr() {
+  _mqActiveTier = '';
+  document.getElementById('mqOverlay').classList.add('show');
+  renderMqQr('');
+  const chips = document.getElementById('mqChips');
+  chips.innerHTML = '<span style="font-size:11px;color:var(--gy)">Loading tiers…</span>';
+  try {
+    const r = await fetch('/api/merchant/categories', {headers: hdr()});
+    const d = await r.json();
+    if (d.ok && d.categories && d.categories.length) {
+      chips.innerHTML = '<button class="mq-chip active" data-tier="" onclick="selectMqTier(this)">Default</button>' +
+        d.categories.map(c =>
+          `<button class="mq-chip" data-tier="${escMq(c.name)}" onclick="selectMqTier(this)">${escMq(c.name)}</button>`
+        ).join('');
+    } else {
+      chips.innerHTML = '<span style="font-size:11px;color:var(--gy)">No tiers configured</span>';
+    }
+  } catch { chips.innerHTML = '<span style="font-size:11px;color:var(--gy)">Failed to load tiers</span>'; }
+}
+function closeMemberQr() { document.getElementById('mqOverlay').classList.remove('show'); }
+function selectMqTier(el) {
+  document.querySelectorAll('.mq-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  _mqActiveTier = el.dataset.tier;
+  renderMqQr(_mqActiveTier);
+}
+function mqRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+function buildMqCard(qrSrc, tier) {
+  const W = 420, QR = 280, H = 160 + QR + (tier ? 84 : 44);
+  const out = document.createElement('canvas');
+  out.width = W * 2; out.height = H * 2;
+  const ctx = out.getContext('2d');
+  ctx.scale(2, 2);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#ff6600'; ctx.fillRect(0, 0, W, 6);
+  ctx.fillStyle = '#18181b'; ctx.font = 'bold 20px Arial, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('SCAN TO JOIN MEMBER', W / 2, 52);
+  ctx.fillStyle = '#ff6600'; ctx.fillRect(W / 2 - 50, 60, 100, 2.5);
+  const qrX = (W - QR) / 2, qrY = 80;
+  ctx.fillStyle = '#f4f4f5';
+  mqRoundRect(ctx, qrX - 12, qrY - 12, QR + 24, QR + 24, 10); ctx.fill();
+  ctx.drawImage(qrSrc, qrX, qrY, QR, QR);
+  if (tier) {
+    ctx.font = 'bold 15px Arial, sans-serif';
+    const tw = ctx.measureText(tier.toUpperCase()).width;
+    const bw = tw + 40, bh = 32, bx = W / 2 - bw / 2, by = qrY + QR + 22;
+    ctx.fillStyle = '#fff7ed'; mqRoundRect(ctx, bx, by, bw, bh, 16); ctx.fill();
+    ctx.strokeStyle = '#ff6600'; ctx.lineWidth = 1.5;
+    mqRoundRect(ctx, bx, by, bw, bh, 16); ctx.stroke();
+    ctx.fillStyle = '#ea5c00'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(tier.toUpperCase(), W / 2, by + bh / 2);
+  }
+  ctx.font = '10px Arial, sans-serif'; ctx.fillStyle = '#a1a1aa';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('member.cloudserveapp.com', W / 2, H - 12);
+  return out;
+}
+let _mqDataUrl = '';
+let _mqFilename = '';
+function renderMqQr(tier) {
+  const base = 'https://member.cloudserveapp.com/p/' + encodeURIComponent(_merchantAccount);
+  const url  = tier ? base + '?tier=' + encodeURIComponent(tier) : base;
+  document.getElementById('mqUrl').textContent = url;
+  QRCode.toCanvas(document.getElementById('mqCanvas'), url, {width: 248, margin: 2}, () => {
+    const card = buildMqCard(document.getElementById('mqCanvas'), tier);
+    _mqDataUrl = card.toDataURL('image/png');
+    const suffix = tier ? '-' + tier.replace(/[^a-zA-Z0-9]/g, '_') : '';
+    _mqFilename = (_merchantAccount || 'member') + suffix + '-qr.png';
+  });
+}
+async function downloadMqQr() {
+  if (!_mqDataUrl) return;
+  const btn = document.getElementById('mqDownloadBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch('/api/download-png', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', ...hdr()},
+      body: JSON.stringify({data: _mqDataUrl, filename: _mqFilename})
+    });
+    if (!resp.ok) return;
+    const {token} = await resp.json();
+    window.location = '/api/download-png?token=' + token;
+  } finally {
+    setTimeout(() => { if (btn) btn.disabled = false; }, 1500);
+  }
+}
+function escMq(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+document.addEventListener('keydown', e => { if (e.key==='Enter') load(); });
+load();   // auto-load on entry
+</script>
+<div class="cc-overlay" id="ccOverlay" onclick="if(event.target===this)ccClose()">
+  <div class="cc-modal">
+    <h3>Clear Cache</h3>
+    <p>Enter password to confirm. This will delete all cached data for this merchant.</p>
+    <input type="password" id="ccPw" placeholder="Password"
+           onkeydown="if(event.key==='Enter')ccConfirm()">
+    <div class="cc-err" id="ccErr"></div>
+    <div class="cc-foot">
+      <button class="btn btn-g" style="padding:6px 14px;font-size:12px" onclick="ccClose()">Cancel</button>
+      <button class="btn btn-p" style="padding:6px 14px;font-size:12px;background:#dc2626" onclick="ccConfirm()">Clear Cache</button>
+    </div>
+  </div>
+</div>
+
+<div class="ar-overlay" id="arOverlay" onclick="if(event.target===this)arClose()">
+  <div class="ar-modal">
+    <h3>AR Invoice Settings</h3>
+    <div class="ar-sub">Settings are saved automatically for next download.</div>
+    <div class="ar-field">
+      <label id="arDebtorCodeLabel">Debtor Code</label>
+      <input type="text" id="arDebtorCode" placeholder="300-0000"
+             onkeydown="if(event.key==='Enter')arConfirm()">
+    </div>
+    <div class="ar-field">
+      <label>Acc No</label>
+      <input type="text" id="arAccNo" placeholder="500-1000"
+             onkeydown="if(event.key==='Enter')arConfirm()">
+    </div>
+    <div class="ar-field">
+      <label>Display Term (COD)</label>
+      <input type="text" id="arCOD" placeholder="C.O.D."
+             onkeydown="if(event.key==='Enter')arConfirm()">
+    </div>
+    <div class="ar-field">
+      <label>Inclusive Tax</label>
+      <select id="arInclusiveTax" style="width:100%;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:13px;outline:none;background:#fff">
+        <option value="F">F — Exclusive (default)</option>
+        <option value="T">T — Inclusive</option>
+      </select>
+    </div>
+    <div class="ar-foot">
+      <button class="btn btn-g" style="padding:6px 14px;font-size:12px" onclick="arClose()">Cancel</button>
+      <button class="btn btn-p" style="padding:6px 14px;font-size:12px" onclick="arConfirm()">Download</button>
+    </div>
+  </div>
+</div>
+
+<div class="je-overlay" id="jeOverlay" onclick="if(event.target===this)jeClose()">
+  <div class="je-modal" id="jeModal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <h3>Journal Entry Settings</h3>
+      <button class="je-adv-btn" id="jeAdvBtn" onclick="jeToggleAdvanced()">Advanced</button>
+    </div>
+    <div class="je-sub">Settings are saved automatically for next download.</div>
+
+    <!-- Simple mode -->
+    <div id="jeSimpleSection">
+      <div class="je-field">
+        <label>Cash Collected [AccNo]</label>
+        <input type="text" id="jeCashAcc" placeholder="320-0000"
+               onkeydown="if(event.key==='Enter')jeConfirm()">
+      </div>
+      <div class="je-field">
+        <label>Bank / e-wallet Collected [AccNo]</label>
+        <input type="text" id="jeBankAcc" placeholder="310-1000"
+               onkeydown="if(event.key==='Enter')jeConfirm()">
+      </div>
+    </div>
+
+    <!-- Advanced mode -->
+    <div id="jeAdvSection" style="display:none">
+      <div class="je-adv-loading" id="jeAdvLoading">Loading payment methods…</div>
+      <div id="jeAdvList" style="display:none">
+        <div class="je-adv-hdr"><span>Payment Method</span><span>AccNo</span></div>
+        <div id="jeAdvRows"></div>
+      </div>
+    </div>
+
+    <!-- Always visible -->
+    <div class="je-field" style="margin-top:4px">
+      <label>Sales Revenue [AccNo]</label>
+      <input type="text" id="jeSalesAcc" placeholder="500-0000"
+             onkeydown="if(event.key==='Enter')jeConfirm()">
+    </div>
+    <div class="je-foot">
+      <button class="btn btn-g" style="padding:6px 14px;font-size:12px" onclick="jeClose()">Cancel</button>
+      <button class="btn btn-p" style="padding:6px 14px;font-size:12px" onclick="jeConfirm()">Download</button>
+    </div>
+  </div>
+</div>
+<div class="rw-overlay" id="rwOverlay" onclick="if(event.target===this)rwClose()">
+  <div class="rw-modal">
+    <h3>⚠ Refund Transaction(s) Found</h3>
+    <div class="rw-sub">The following <strong id="rwCount"></strong> refund(s) in this date range are <u>not included</u> in the export.</div>
+    <div class="rw-list" id="rwList"></div>
+    <div class="rw-note">
+      Please create <strong>Credit Notes (CN)</strong> manually in <span id="rwSoftware">AutoCount</span> for these transactions.<br>
+      The export file only contains normal sales — refunds must be handled separately.
+    </div>
+    <div class="rw-foot">
+      <button class="btn btn-g" style="padding:6px 14px;font-size:12px" onclick="rwClose()">Cancel</button>
+      <button class="btn btn-g" style="padding:6px 14px;font-size:12px" onclick="rwDownload()">⬇ Download List</button>
+      <button class="btn btn-p" style="padding:6px 14px;font-size:12px" onclick="rwProceed()">Understood, Proceed</button>
+    </div>
+  </div>
+</div>
+
+<div class="si-overlay" id="siOverlay" onclick="if(event.target===this)siClose()">
+  <div class="si-modal">
+    <h3>Sales Invoice Settings</h3>
+    <div class="si-sub">Settings are saved automatically for next download.</div>
+    <div class="si-field">
+      <label>Debtor Code</label>
+      <input type="text" id="siDebtorCode" placeholder="300-0000"
+             onkeydown="if(event.key==='Enter')siConfirm()">
+    </div>
+    <div class="si-field">
+      <label>Debtor Name</label>
+      <input type="text" id="siDebtorName" placeholder="e.g. COMPANY SDN BHD"
+             onkeydown="if(event.key==='Enter')siConfirm()">
+    </div>
+    <div class="si-field">
+      <label>Display Term (COD)</label>
+      <input type="text" id="siCOD" placeholder="C.O.D."
+             onkeydown="if(event.key==='Enter')siConfirm()">
+    </div>
+    <div class="si-foot">
+      <button class="btn btn-g" style="padding:6px 14px;font-size:12px" onclick="siClose()">Cancel</button>
+      <button class="btn btn-p" style="padding:6px 14px;font-size:12px" onclick="siConfirm()">Download</button>
+    </div>
+  </div>
+</div>
+<!-- ── Member QR Modal ──────────────────────────────────────────────────── -->
+<div class="cc-overlay" id="mqOverlay" onclick="if(event.target===this)closeMemberQr()" style="z-index:300">
+  <div class="cc-modal" style="width:320px;padding:24px">
+    <h3 style="margin-bottom:4px">Member Registration QR</h3>
+    <p style="font-size:12px;color:var(--gy);margin-bottom:10px">Select a tier then download</p>
+    <div id="mqChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;min-height:26px"></div>
+    <canvas id="mqCanvas" style="display:block;margin:0 auto 10px;border-radius:6px"></canvas>
+    <div id="mqUrl" style="font-size:10px;color:var(--gy);word-break:break-all;margin-bottom:14px;text-align:center"></div>
+    <div class="cc-foot">
+      <button class="btn btn-g" style="padding:6px 14px;font-size:12px" onclick="closeMemberQr()">Close</button>
+      <button id="mqDownloadBtn" class="btn btn-p" style="padding:6px 14px;font-size:12px" onclick="downloadMqQr()">Download PNG</button>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+</body>
+</html>

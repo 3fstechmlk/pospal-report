@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Payment Report · 3FS Technology</title>
+<link rel="stylesheet" href="/datepicker.css?v=5">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--or:#f60;--dk:#18181b;--gy:#71717a;--bd:#e4e4e7;--bg:#fafafa;--wh:#fff;--re:#dc2626}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;background:var(--bg);color:var(--dk)}
+
+.topbar{background:var(--dk);height:52px;display:flex;align-items:center;padding:0 24px;gap:16px}
+.brand{font-weight:700;font-size:15px;color:var(--or);letter-spacing:.5px}
+.merchant-name{color:#e4e4e7;font-size:13px;font-weight:500}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.btn-logout{background:none;border:1px solid #3f3f46;border-radius:6px;color:#a1a1aa;font-size:12px;padding:5px 12px;cursor:pointer;transition:color .15s,border-color .15s}
+.btn-logout:hover{color:#fff;border-color:#71717a}
+.nav-link{color:#a1a1aa;font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:6px;transition:color .15s,background .15s}
+.nav-link:hover{color:#fff;background:rgba(255,255,255,.08)}
+.nav-link.active{color:#fff;background:rgba(255,102,0,.25)}
+
+.page{padding:20px 24px;max-width:1400px;margin:0 auto}
+
+.fbar{background:var(--wh);border:1px solid var(--bd);border-radius:8px;padding:12px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.fbar label{font-weight:600;color:var(--gy);font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.btn{border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-p{background:var(--or);color:#fff}.btn-p:hover:not(:disabled){opacity:.87}
+.btn-g{background:none;border:1px solid var(--bd);color:var(--gy)}.btn-g:hover{border-color:#aaa;color:var(--dk)}
+.fbar-right{margin-left:auto;display:flex;align-items:center;gap:6px}
+.cache-badge{font-size:11px;color:var(--gy);background:#f4f4f5;border:1px solid var(--bd);border-radius:5px;padding:4px 10px;white-space:nowrap}
+.cache-badge span{font-weight:700;color:var(--dk)}
+
+.stats{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.sc{flex:1;min-width:140px;background:var(--wh);border:1px solid var(--bd);border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sc .lbl{font-size:10px;color:var(--gy);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.sc .val{font-size:18px;font-weight:700;margin-top:4px}
+.sc .val.or{color:var(--or)}
+.sc .val.gr{color:#16a34a}
+.sc .sub{font-size:11px;color:var(--gy);margin-top:2px}
+
+.tc{background:var(--wh);border:1px solid var(--bd);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.tc-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bd);flex-wrap:wrap;gap:8px}
+.tc-head h2{font-size:14px;font-weight:700}
+.tc-head .sub{font-size:12px;color:var(--gy)}
+.sw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:600px;font-size:12.5px}
+thead th{background:var(--or);color:#fff;padding:9px 12px;text-align:right;white-space:nowrap;font-size:11.5px;font-weight:600;border-right:1px solid rgba(255,255,255,.15)}
+thead th:first-child{text-align:left}
+thead th:nth-child(2){text-align:center}
+thead th:last-child{border-right:0;background:#d95c00}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s}
+tbody tr:hover{background:#fff8f3}
+td{padding:9px 12px;text-align:right;white-space:nowrap}
+td:first-child{text-align:left;color:var(--gy)}
+td:nth-child(2){text-align:center;font-weight:500}
+td:last-child{font-weight:600;background:#fff7ed}
+.tot td{background:#fff7ed;font-weight:700;border-top:2px solid var(--or)}
+.tot td:first-child{color:var(--or)}
+.tot td:last-child{background:#ffe8cc}
+.zero{color:#c4c4c8}
+
+.sv{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;color:var(--gy);gap:12px;text-align:center}
+.sv p{font-size:14px}
+.spin{width:34px;height:34px;border:3px solid var(--bd);border-top-color:var(--or);border-radius:50%;animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+.err{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;color:var(--re);margin-bottom:14px;font-size:13px;display:none}
+
+/* ── Clear Cache password modal ── */
+.cc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center}
+.cc-overlay.show{display:flex}
+.cc-modal{background:#fff;border-radius:10px;width:340px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.cc-modal h3{font-size:15px;font-weight:700;margin-bottom:6px}
+.cc-modal p{font-size:12px;color:var(--gy);margin-bottom:16px}
+.cc-modal input{width:100%;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:13px;outline:none;margin-bottom:6px}
+.cc-modal input:focus{border-color:var(--or);box-shadow:0 0 0 2px rgba(255,102,0,.15)}
+.cc-err{font-size:12px;color:var(--re);min-height:16px;margin-bottom:10px}
+.cc-foot{display:flex;gap:8px;justify-content:flex-end}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="brand">3FS TECHNOLOGY</div>
+  <div class="merchant-name" id="merchantName"></div>
+  <div class="topbar-right">
+    <a href="/report" class="nav-link">Sales Report</a>
+    <a href="/payment" class="nav-link active">Payment Report</a>
+    <a href="/orders" class="nav-link">Transactions</a>
+    <span id="versionBadge" style="font-size:11px;color:#52525b;background:#27272a;padding:3px 8px;border-radius:4px"></span>
+    <button class="btn-logout" onclick="doLogout()">Log Out</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="fbar">
+    <label>From</label><input type="date" id="s">
+    <label>To</label>  <input type="date" id="e">
+    <button class="btn btn-p" id="bLoad" onclick="load()">Load Report</button>
+    <button class="btn btn-g" onclick="clearCache()">Clear Cache</button>
+    <button class="btn btn-g" id="bExport" onclick="doExport()" disabled>⬇ Export</button>
+    <div class="fbar-right">
+      <div class="cache-badge">Cached: <span id="cachedDays">–</span> days</div>
+      <span id="quotaMeter"></span>
+    </div>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div class="stats" id="stats" style="display:none">
+    <div class="sc"><div class="lbl">Days</div><div class="val" id="vDays">–</div><div class="sub">with transactions</div></div>
+    <div class="sc"><div class="lbl">Transactions</div><div class="val" id="vTx">–</div><div class="sub">total tickets</div></div>
+    <div class="sc"><div class="lbl">Total Collected</div><div class="val or" id="vTotal">–</div><div class="sub">all payment methods</div></div>
+  </div>
+
+  <div class="tc">
+    <div class="tc-head">
+      <div>
+        <h2>Payment Breakdown — <span id="mLabel"></span></h2>
+        <div class="sub" id="rng"></div>
+      </div>
+    </div>
+    <div id="svEmpty" class="sv"><div class="spin"></div><p>Loading…</p></div>
+    <div class="sw" id="tableWrap" style="display:none">
+      <table>
+        <thead><tr id="thead-row"></tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="/datepicker.js?v=6"></script>
+<script src="/quota-meter.js?v=1"></script>
+<script>
+const TOKEN = sessionStorage.getItem('merchantToken');
+if (!TOKEN) window.location.href = '/';
+
+// ── Stale session → out ─────────────────────────────────────────────────
+// The server keeps sessions in memory, so a restart invalidates every token while
+// the string stays in sessionStorage — and the check above accepts a token merely
+// for existing.  A 401 is the only reliable signal that the session is gone, so
+// catch it in one place: checking at each call site meant most of them missed it
+// and the page sat there looking logged in until something happened to fail.
+// /login is exempt — a 401 there just means wrong password.
+(function () {
+  const raw = window.fetch.bind(window);
+  let gone = false;
+  window.fetch = async (...args) => {
+    const res = await raw(...args);
+    if (res.status === 401 && !gone && !String(args[0] || '').includes('/login')) {
+      gone = true;            // one logout even when several requests fail at once
+      doLogout();
+    }
+    return res;
+  };
+})();
+const NAME  = sessionStorage.getItem('merchantName') || '';
+fetch('/api/version').then(r=>r.json()).then(d=>{const el=document.getElementById('versionBadge');if(el)el.textContent='v'+d.version;}).catch(()=>{});
+
+if (!TOKEN) { window.location.href = '/'; }
+document.getElementById('merchantName').textContent = NAME;
+document.getElementById('mLabel').textContent = NAME;
+
+// Date range picker — init before setting values
+const drp = new DateRangePicker('s', 'e', () => {});
+(function() {
+  const t   = new Date();
+  const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  // TO stops at today-2 so the whole default range is served from cache and the
+  // first load costs no Pospal API quota. FROM tracks the calendar month, so on
+  // the 1st and 2nd of a month the two cross over — fall back a whole month
+  // rather than pulling TO forward, which would drag in today's uncached data.
+  const d2 = new Date(t); d2.setDate(t.getDate()-2);
+  let f = new Date(t.getFullYear(), t.getMonth(), 1);
+  if (f > d2) f = new Date(t.getFullYear(), t.getMonth()-1, 1);
+  drp.setRange(fmt(f), fmt(d2));
+})();
+
+function fm(n) {
+  const v = parseFloat(n) || 0;
+  return (v < 0 ? '-' : '') + 'RM ' + Math.abs(v).toFixed(2);
+}
+function fd(s) {
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+function state(s) {
+  const wrap = document.getElementById('tableWrap');
+  const sv   = document.getElementById('svEmpty');
+  if (s === 't') { wrap.style.display = ''; sv.style.display = 'none'; }
+  else           { wrap.style.display = 'none'; sv.style.display = ''; }
+}
+
+let _cols = [];
+
+function makeRow(r, isTotal) {
+  const cls = isTotal ? ' class="tot"' : '';
+  const dateTd = isTotal
+    ? `<td>TOTAL</td>`
+    : `<td>${fd(r.date)}</td>`;
+  const txTd = `<td>${r.txCount}</td>`;
+  const colTds = _cols.map(col => {
+    const v = (r.byCode || {})[col.code] || 0;
+    const disp = v === 0 ? `<span class="zero">–</span>` : fm(v);
+    return `<td>${disp}</td>`;
+  }).join('');
+  const totalTd = `<td>${fm(r.total)}</td>`;
+  return `<tr${cls}>${dateTd}${txTd}${colTds}${totalTd}</tr>`;
+}
+
+// Fetch cached days count and update badge
+async function loadCachedDays() {
+  try {
+    const r = await fetch('/api/merchant/usage?peek=1', {
+      headers: {'Authorization': 'Bearer ' + TOKEN}
+    });
+    const d = await r.json();
+    if (d.ok) document.getElementById('cachedDays').textContent = d.cachedDays;
+  } catch(e) {}
+}
+
+async function load() {
+  const s = document.getElementById('s').value;
+  const e = document.getElementById('e').value;
+  const errEl = document.getElementById('err');
+  errEl.style.display = 'none';
+  if (!s || !e) { errEl.textContent = 'Please select start and end dates.'; errEl.style.display = ''; return; }
+
+  document.getElementById('bLoad').disabled = true;
+  document.getElementById('bLoad').textContent = 'Loading…';
+  document.getElementById('bExport').disabled = true;
+  document.getElementById('stats').style.display = 'none';
+  state('empty');
+  document.getElementById('svEmpty').innerHTML = '<div class="spin"></div><p>Loading…</p>';
+
+  try {
+    const r = await fetch(`/api/merchant/payment-report?start=${s}&end=${e}`, {
+      headers: {'Authorization': 'Bearer ' + TOKEN}
+    });
+    // Sessions live in the server's memory: a restart leaves the token string in
+    // sessionStorage but makes it worthless, so 401 means log out, not "error".
+    if (r.status === 401) { doLogout(); return; }
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Failed to load');
+
+    _cols = d.columns;
+    const rows  = d.rows;
+    const total = d.total;
+
+    if (!rows.length) {
+      document.getElementById('svEmpty').innerHTML = '<p>No transactions found for this period.</p>';
+      loadCachedDays();
+      return;
+    }
+
+    // Build thead
+    const headerCols = _cols.map(c => `<th>${c.name}</th>`).join('');
+    document.getElementById('thead-row').innerHTML =
+      `<th>Business Date</th><th>Tx</th>${headerCols}<th>Total</th>`;
+
+    // Build tbody
+    document.getElementById('tb').innerHTML =
+      rows.map(r => makeRow(r, false)).join('') + makeRow(total, true);
+
+    document.getElementById('rng').textContent = `${fd(s)} – ${fd(e)}`;
+
+    // Summary cards
+    document.getElementById('vDays').textContent  = rows.length;
+    document.getElementById('vTx').textContent    = total.txCount.toLocaleString();
+    document.getElementById('vTotal').textContent = 'RM ' + parseFloat(total.total).toFixed(2);
+    document.getElementById('stats').style.display = '';
+
+    state('t');
+    document.getElementById('bExport').disabled = false;
+    loadCachedDays();
+  } catch(ex) {
+    errEl.textContent = ex.message;
+    errEl.style.display = '';
+    document.getElementById('svEmpty').innerHTML = '<p>Failed to load.</p>';
+  } finally {
+    document.getElementById('bLoad').disabled = false;
+    document.getElementById('bLoad').textContent = 'Load Report';
+  }
+}
+
+async function doExport() {
+  const s = document.getElementById('s').value;
+  const e = document.getElementById('e').value;
+  if (!s || !e) return;
+  const btn = document.getElementById('bExport');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const r = await fetch(`/api/merchant/payment-report/export?start=${s}&end=${e}`, {
+      headers: {'Authorization': 'Bearer ' + TOKEN}
+    });
+    if (!r.ok) { const d = await r.json().catch(()=>({})); alert(d.error || 'Export failed'); return; }
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    const cd = r.headers.get('Content-Disposition') || '';
+    const fn = cd.match(/filename="([^"]+)"/);
+    a.download = fn ? fn[1] : `Payment_${s}_${e}.xlsx`;
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch(ex) {
+    alert('Export error: ' + ex.message);
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+function clearCache() {
+  document.getElementById('ccPw').value = '';
+  document.getElementById('ccErr').textContent = '';
+  document.getElementById('ccOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('ccPw').focus(), 80);
+}
+async function ccConfirm() {
+  const pw = document.getElementById('ccPw').value;
+  if (pw !== 'Aabm9901') { document.getElementById('ccErr').textContent = 'Wrong password.'; return; }
+  ccClose();
+  await fetch('/api/cache/clear', {
+    method: 'POST',
+    headers: {'Authorization': 'Bearer ' + TOKEN}
+  });
+  alert('Cache cleared.');
+  document.getElementById('cachedDays').textContent = '0';
+}
+function ccClose() { document.getElementById('ccOverlay').classList.remove('show'); }
+
+function doLogout() {
+  sessionStorage.removeItem('merchantToken');
+  sessionStorage.removeItem('merchantName');
+  window.location.href = '/';
+}
+
+QuotaMeter.mount({
+  into   : document.getElementById('quotaMeter'),
+  headers: () => ({'Authorization': 'Bearer ' + TOKEN}),
+  onData : d => { if (d.cachedDays != null) document.getElementById('cachedDays').textContent = d.cachedDays; }
+});
+
+// Auto-load on entry
+loadCachedDays();
+load();
+</script>
+<div class="cc-overlay" id="ccOverlay" onclick="if(event.target===this)ccClose()">
+  <div class="cc-modal">
+    <h3>Clear Cache</h3>
+    <p>Enter password to confirm. This will delete all cached data for this merchant.</p>
+    <input type="password" id="ccPw" placeholder="Password"
+           onkeydown="if(event.key==='Enter')ccConfirm()">
+    <div class="cc-err" id="ccErr"></div>
+    <div class="cc-foot">
+      <button class="btn btn-g" style="padding:6px 14px;font-size:12px" onclick="ccClose()">Cancel</button>
+      <button class="btn btn-p" style="padding:6px 14px;font-size:12px;background:#dc2626" onclick="ccConfirm()">Clear Cache</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

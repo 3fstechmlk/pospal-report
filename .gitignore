@@ -1,0 +1,58 @@
+# ── Runtime data — never commit ───────────────────────────────────────────────
+# data/ holds merchants.json (868 merchants with their live Pospal appKeys and
+# password hashes), the member-name cache and sync state. cache/ is the ticket
+# archive; on the server it is a symlink to a 45G volume.
+data/
+cache/
+ssh/
+
+# ── Credentials hard-coded in the retired PHP/Node implementation ─────────────
+# index.php, sales-report.php and server.js carry a real, in-service Pospal
+# appId/appKey pair (YOU MI KITCHEN SDN. BHD.). Nothing runs them any more —
+# run.py is the only entry point — but they must not reach a remote. They still
+# ship with the tar deploy, so they stay on disk; they just never get committed.
+# Rotate that key, then this block can go.
+/index.php
+/sales-report.php
+/server.js
+/package.json
+
+# ── Stale copies of the project, kept on disk but not worth versioning ────────
+# pospal-report/ is an old nested duplicate (the deploy tar excludes it too).
+# legacy/ holds the pre-rewrite pages.
+pospal-report/
+legacy/
+
+# ── Belongs to the Workflow project, not to this one ──────────────────────────
+# run.py serves public/ only and never reads these.
+templates/
+static/
+migrate_keivi.py
+/datepicker.css
+/datepicker.js
+
+# ── Local tooling ─────────────────────────────────────────────────────────────
+.claude/
+.playwright-mcp/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.Python
+*.egg-info/
+dist/
+build/
+
+# ── Archives & dumps ──────────────────────────────────────────────────────────
+*.tar.gz
+*.db
+*.db.bak*
+*.sqlite
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo

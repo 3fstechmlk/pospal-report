@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transactions · 3FS Technology</title>
+<link rel="stylesheet" href="/datepicker.css?v=5">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--or:#f60;--dk:#18181b;--gy:#71717a;--bd:#e4e4e7;--bg:#fafafa;--wh:#fff;--re:#dc2626;--gr:#16a34a}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;background:var(--bg);color:var(--dk)}
+
+/* ── Topbar ── */
+.topbar{background:var(--dk);height:52px;display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:200}
+.brand{font-weight:700;font-size:15px;color:var(--or);letter-spacing:.5px;white-space:nowrap}
+.merchant-name{color:#e4e4e7;font-size:13px;font-weight:500}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.nav-link{color:#a1a1aa;font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:6px;transition:color .15s,background .15s}
+.nav-link:hover{color:#fff;background:rgba(255,255,255,.08)}
+.nav-link.active{color:#fff;background:rgba(255,102,0,.25)}
+.vbadge{font-size:11px;color:#52525b;background:#27272a;padding:3px 8px;border-radius:4px}
+.btn-logout{background:none;border:1px solid #3f3f46;border-radius:6px;color:#a1a1aa;font-size:12px;padding:5px 12px;cursor:pointer;transition:color .15s,border-color .15s}
+.btn-logout:hover{color:#fff;border-color:#71717a}
+
+/* ── Filter bar ── */
+.page{padding:20px 24px;max-width:1600px;margin:0 auto}
+.fbar{background:var(--wh);border:1px solid var(--bd);border-radius:8px;padding:12px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.fbar label{font-weight:600;color:var(--gy);font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.btn{border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-p{background:var(--or);color:#fff}.btn-p:hover:not(:disabled){opacity:.87}
+.btn-g{background:none;border:1px solid var(--bd);color:var(--gy);font-size:12px;padding:5px 12px}.btn-g:hover:not(:disabled){border-color:#aaa;color:var(--dk)}
+input[type="date"],select,.inp{border:1px solid var(--bd);border-radius:6px;background:var(--wh);color:var(--dk);font-size:12px;padding:6px 10px;outline:none;font-family:inherit;transition:border-color .15s}
+input[type="date"]:focus,select:focus,.inp:focus{border-color:#a1a1aa}
+input[type="date"]{width:138px}
+select{width:180px;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2371717a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px}
+.inp{width:154px}
+
+/* ── Stats cards ── */
+.stats{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.sc{flex:1;min-width:140px;background:var(--wh);border:1px solid var(--bd);border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sc .lbl{font-size:10px;color:var(--gy);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.sc .val{font-size:18px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.sc .val.or{color:var(--or)}
+.sc .sub{font-size:11px;color:var(--gy);margin-top:2px}
+
+/* ── Table container ── */
+.tc{background:var(--wh);border:1px solid var(--bd);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.tc-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--bd);gap:10px;flex-wrap:wrap}
+.tc-head h2{font-size:13px;font-weight:700;color:var(--dk)}
+.tc-head-right{display:flex;align-items:center;gap:8px}
+.tc-count{font-size:11px;color:var(--gy)}
+.sw{overflow-x:auto}
+
+/* ── Table ── */
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+thead th{background:#f4f4f5;color:var(--gy);padding:9px 11px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);white-space:nowrap;overflow:hidden}
+thead th.r{text-align:right}
+thead th.c{text-align:center}
+
+tbody tr.trow{border-bottom:1px solid var(--bd);transition:background .1s}
+tbody tr.trow:last-child{border-bottom:0}
+tbody tr.trow:hover{background:#fafafa}
+tbody tr.refrow{background:#fff5f5}
+tbody tr.refrow:hover{background:#fee2e2}
+tbody tr.invrow{opacity:.45}
+tbody tr.invrow td{text-decoration:line-through;text-decoration-color:#d4d4d8}
+
+tbody td{padding:8px 11px;font-size:12px;color:var(--dk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+tbody td.mono{font-family:'Menlo','Consolas',monospace;font-size:11px}
+tbody td.r{text-align:right}
+tbody td.c{text-align:center}
+tbody td.dim{color:var(--gy)}
+tbody td.net{font-family:'Menlo','Consolas',monospace;font-size:12px;color:var(--or);font-weight:600;text-align:right}
+tbody td.pft{font-family:'Menlo','Consolas',monospace;font-size:11px;color:var(--gr);text-align:right}
+tbody td.dsc{font-family:'Menlo','Consolas',monospace;font-size:11px;color:var(--re);text-align:right}
+
+/* Type badge */
+.bdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.bdg.sale{background:#dcfce7;color:#166534}
+.bdg.refund{background:#fee2e2;color:var(--re)}
+
+/* Expand button */
+.xbtn{background:none;border:1px solid var(--bd);border-radius:5px;color:var(--gy);width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:color .15s,border-color .15s,background .15s;flex-shrink:0}
+.xbtn:hover{color:var(--or);border-color:var(--or);background:#fff8f3}
+.xbtn svg{transition:transform .2s ease}
+.xbtn.open{color:var(--or);border-color:var(--or);background:#fff8f3}
+.xbtn.open svg{transform:rotate(90deg)}
+
+/* ── Detail row ── */
+tr.drow td{padding:0;border-bottom:1px solid var(--bd)}
+.din{padding:4px 14px 14px 14px;border-left:3px solid var(--or);margin-left:6px;background:#fffcf9;animation:fadeSlide .15s ease-out both}
+
+/* Detail sub-table */
+.dtbl{width:100%;border-collapse:collapse;margin-top:10px}
+.dtbl thead th{background:#fef9f5;color:var(--gy);font-size:11px;letter-spacing:.6px;padding:5px 8px;border-bottom:1px solid var(--bd);position:static;font-weight:700;text-transform:uppercase}
+.dtbl tbody tr{border-bottom:1px solid #f0f0f0}
+.dtbl tbody tr:last-child{border-bottom:0}
+.dtbl tbody td{padding:6px 8px;font-size:13px;color:var(--gy);white-space:normal}
+.dtbl tbody tr.irow td{color:var(--dk)}
+.dtbl .mono{font-family:'Menlo','Consolas',monospace;font-size:11px}
+.dtbl .r{text-align:right}
+.dtbl tr.arow td{color:#a1a1aa;font-style:italic}
+.dtbl tr.arow td.aval{font-family:'Menlo','Consolas',monospace;text-align:right}
+.dtbl tr.arow td.albl{padding-left:22px}
+.bc{font-family:'Menlo','Consolas',monospace;font-size:9.5px;color:#a1a1aa;margin-left:5px}
+.irmk{font-size:10.5px;color:#b45309;margin-top:2px}
+.irmk::before{content:'Remark: ';color:#a16207;font-weight:600}
+
+/* Info pills */
+.ibar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:7px 10px;background:#fff;border-radius:6px;border:1px solid var(--bd)}
+.ipill{display:inline-flex;align-items:center;gap:5px;background:#f4f4f5;border:1px solid var(--bd);border-radius:20px;padding:3px 10px;font-size:10px;color:var(--gy)}
+.ipill .pk{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:#a1a1aa}
+.ipill .pv{font-family:'Menlo','Consolas',monospace;color:var(--dk)}
+.ipill.tbl{border-color:#fed7aa}.ipill.tbl .pv{color:var(--or)}
+.ipill.pay{border-color:#bfdbfe}.ipill.pay .pv{color:#1d4ed8}
+.ipill.rmk{border-color:#fde68a;background:#fffbeb}.ipill.rmk .pv{color:#b45309;font-family:inherit;white-space:normal}
+
+/* ── Footer summary (3-row tfoot) ── */
+tfoot td{padding:8px 11px;font-size:12px;border-top:2px solid var(--bd);white-space:nowrap;overflow:hidden}
+tfoot td.r{text-align:right}
+tfoot td.mono{font-family:'Menlo','Consolas',monospace;font-size:11px}
+tfoot tr.fs-sale td{background:#fff8f3;border-top:2px solid #fed7aa}
+tfoot tr.fs-void td{background:#fafafa;border-top:1px solid #e4e4e7;font-style:italic}
+tfoot tr.fs-void td.row-lbl{color:#a1a1aa;font-weight:700;font-size:12px}
+tfoot tr.fs-void td{color:#a1a1aa}
+tfoot tr.fs-sale td.row-lbl{color:var(--or);font-weight:700;font-size:12px}
+tfoot tr.fs-refund td{background:#fff5f5;border-top:1px solid #fecaca}
+tfoot tr.fs-refund td.row-lbl{color:var(--re);font-weight:700;font-size:12px}
+tfoot tr.fs-net td{background:#f4f4f5;border-top:2px solid var(--bd)}
+tfoot tr.fs-net td{font-weight:700;color:var(--dk)}
+tfoot tr.fs-net td.row-lbl{font-weight:700;font-size:12px}
+
+/* ── Pagination ── */
+.pgbar{display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 0 4px}
+.pgbtn{background:none;border:1px solid var(--bd);border-radius:6px;color:var(--gy);font-size:11px;font-weight:600;padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s}
+.pgbtn:hover:not(:disabled){color:var(--dk);border-color:#aaa}
+.pgbtn:disabled{opacity:.35;cursor:not-allowed}
+.pginfo{font-size:11px;color:var(--gy);padding:0 6px}
+
+/* ── States ── */
+.sv{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:260px;gap:12px;color:var(--gy)}
+.sv svg{opacity:.3}.sv p{font-size:13px;font-weight:600}.sv small{font-size:11px;color:#a1a1aa}
+.err-bar{background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:11px 15px;color:var(--re);font-size:12px;display:none;margin-bottom:14px}
+.fresh-bar{background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:9px 15px;color:#92400e;font-size:12px;display:none;margin-bottom:14px}
+.spin{width:28px;height:28px;border:2px solid var(--bd);border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite}
+
+/* ── Col widths ── */
+.cx{width:40px}.csn{width:168px}.cdt{width:148px}.ctp{width:76px}.ccs{width:98px}.cmb{width:132px}.cq{width:48px}.cgr{width:100px}.cn{width:105px}.cn2{width:105px}.ctx{width:82px}.cdc{width:82px}.cpf{width:86px}
+
+/* ── Invoice Settings Modal ── */
+.is-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;display:none;align-items:center;justify-content:center}
+.is-overlay.open{display:flex}
+.is-modal{background:#fff;border-radius:12px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.is-head{padding:18px 20px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.is-head h3{font-size:14px;font-weight:700;color:var(--dk)}
+.is-head small{font-size:11px;color:var(--gy);font-weight:400;margin-left:8px}
+.is-body{padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.is-row{display:flex;flex-direction:column;gap:4px}
+.is-row label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gy)}
+.is-row input,.is-row select{border:1px solid var(--bd);border-radius:6px;padding:7px 10px;font-size:13px;font-family:inherit;color:var(--dk);outline:none;width:100%;transition:border-color .15s}
+.is-row input:focus,.is-row select:focus{border-color:#a1a1aa}
+.is-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.is-foot{padding:14px 20px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+/* ── Export Modal ── */
+.ex-scope{background:#fff8f3;border:1px solid #fed7aa;border-radius:8px;padding:11px 13px;font-size:12px;color:#7c2d12;line-height:1.75}
+.ex-scope .k{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#9a3412;display:inline-block;width:76px}
+.ex-scope .v{font-family:'Menlo','Consolas',monospace;font-weight:600}
+.ex-scope .cnt{color:var(--or);font-weight:700}
+.ex-grp>.ex-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gy);margin-bottom:7px;display:block}
+.ex-opt{display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border:1px solid var(--bd);border-radius:8px;cursor:pointer;margin-bottom:7px;transition:border-color .12s,background .12s}
+.ex-opt:hover{border-color:#d4d4d8}
+.ex-opt.on{border-color:var(--or);background:#fff8f3}
+.ex-opt input{margin:2px 0 0;accent-color:var(--or);cursor:pointer;flex-shrink:0}
+.ex-opt .ot{font-size:12.5px;font-weight:600;color:var(--dk);display:block}
+.ex-opt .os{font-size:11px;color:var(--gy);display:block;margin-top:2px;line-height:1.45}
+.ex-chk{display:flex;gap:8px;align-items:center;font-size:12px;color:#3f3f46;cursor:pointer;padding:4px 0}
+.ex-chk input{accent-color:var(--or);cursor:pointer;margin:0;flex-shrink:0}
+.ex-chk .cs{color:#a1a1aa;font-size:11px}
+
+/* ── Animations ── */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="brand">3FS TECHNOLOGY</div>
+  <div class="merchant-name" id="merchantName"></div>
+  <div class="topbar-right">
+    <a href="/report"  class="nav-link">Sales Report</a>
+    <a href="/payment" class="nav-link">Payment Report</a>
+    <a href="/orders"  class="nav-link active">Transactions</a>
+    <span class="vbadge" id="versionBadge"></span>
+    <button class="btn-logout" onclick="doLogout()">Log Out</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- Filter bar -->
+  <div class="fbar">
+    <label>From</label><input type="date" id="s">
+    <label>To</label><input type="date" id="e">
+    <select id="typeFilter" onchange="onFC()">
+      <option value="all">All Types</option>
+      <option value="sale">Sales</option>
+      <option value="refund">Refunds</option>
+      <option value="void">Void</option>
+    </select>
+    <select id="payFilter" onchange="onFC()">
+      <option value="all">All Payment Methods</option>
+    </select>
+    <input type="text" class="inp" id="snSearch" placeholder="Receipt No." oninput="onFC()">
+    <button class="btn btn-p" id="bLoad" onclick="loadOrders()">Load Orders</button>
+    <span id="quotaMeter" style="margin-left:auto"></span>
+  </div>
+
+  <div class="err-bar" id="errBar"></div>
+  <div class="fresh-bar" id="freshBar"></div>
+
+  <!-- Stats cards (hidden until data loads) -->
+  <div class="stats" id="statsRow" style="display:none">
+    <div class="sc"><div class="lbl">Total Orders</div><div class="val" id="sOrd">—</div><div class="sub" id="sDr">—</div></div>
+    <div class="sc"><div class="lbl">Net Revenue</div><div class="val or" id="sAR">—</div><div class="sub">Excl. SST</div></div>
+    <div class="sc"><div class="lbl">Collected</div><div class="val or" id="sNet">—</div><div class="sub">Incl. SST</div></div>
+    <div class="sc"><div class="lbl">Total SST</div><div class="val" id="sTax">—</div><div class="sub">Govt. service tax</div></div>
+    <div class="sc"><div class="lbl">Service Charge</div><div class="val" id="sSvc">—</div><div class="sub">Restaurant charge</div></div>
+    <div class="sc"><div class="lbl">Total Discount</div><div class="val" id="sDisc">—</div><div class="sub">Gross − collected</div></div>
+    <div class="sc"><div class="lbl">Rounding</div><div class="val" id="sRnd">—</div><div class="sub">Net adjustment</div></div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="sv" id="sv0">
+    <svg width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.3" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="18" rx="2.5"/><path d="M3 9h18M9 21V9M15 9v12"/>
+    </svg>
+    <p>Select a date range and load orders</p>
+    <small>History loads from cache · today's data refreshes live every 30 min</small>
+  </div>
+
+  <!-- Loading state -->
+  <div class="sv" id="sv1" style="display:none">
+    <div class="spin"></div>
+    <p>Loading orders…</p>
+    <small id="ldMsg"></small>
+  </div>
+
+  <!-- Data state -->
+  <div id="sv2" style="display:none">
+    <div class="tc">
+      <div class="tc-head">
+        <h2>Transactions</h2>
+        <div class="tc-head-right">
+          <span class="tc-count" id="tcount"></span>
+          <button class="btn btn-g" style="color:#c2410c;border-color:#fed7aa" onclick="openExport()" title="Export to Excel">⬇ Export Excel</button>
+          <button class="btn btn-g" onclick="openInvSettings()" title="Invoice header settings">⚙ Invoice Settings</button>
+          <button class="btn btn-g" id="btnExpandAll" onclick="toggleExpandAll()">Expand All</button>
+        </div>
+      </div>
+      <div class="sw">
+        <table>
+          <colgroup>
+            <col class="cx"><col class="csn"><col class="cdt"><col class="ctp">
+            <col class="ccs"><col class="cmb"><col class="cq">
+            <col class="cgr"><col class="cn"><col class="cn2"><col class="ctx">
+            <col class="cdc">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="cx"></th>
+              <th>Receipt No.</th>
+              <th>Date &amp; Time</th>
+              <th>Type</th>
+              <th>Cashier</th>
+              <th>Member</th>
+              <th class="c">Qty</th>
+              <th class="r">Gross Amt</th>
+              <th class="r">Net Collected</th>
+              <th class="r">Excl. SST</th>
+              <th class="r">SST</th>
+              <th class="r">Discount</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+          <tfoot id="tfoot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="pgbar" id="pgbar"></div>
+  </div>
+
+<!-- ── Invoice Settings Modal ── -->
+<div class="is-overlay" id="isOverlay" onclick="if(event.target===this)closeInvSettings()">
+  <div class="is-modal">
+    <div class="is-head">
+      <div><h3>Invoice Settings <small>Saved on server</small></h3></div>
+      <button class="btn btn-g" style="padding:4px 10px;font-size:12px" onclick="closeInvSettings()">✕</button>
+    </div>
+    <div class="is-body">
+      <div class="is-row"><label>Company / Business Name</label><input id="is_name" placeholder="e.g. Youmiqi 有米气 Sdn Bhd"></div>
+      <div class="is-row"><label>SSM Registration No.</label><input id="is_ssm" placeholder="e.g. 1234567-U"></div>
+      <div class="is-row"><label>SST Registration No. (leave blank if not registered)</label><input id="is_sst" placeholder="e.g. W10-1234-32000123"></div>
+      <div class="is-row"><label>Address Line 1</label><input id="is_addr1" placeholder="e.g. No. 12, Jalan ABC"></div>
+      <div class="is-row"><label>Address Line 2</label><input id="is_addr2" placeholder="e.g. Taman XYZ"></div>
+      <div class="is-2col">
+        <div class="is-row"><label>Postcode</label><input id="is_post" placeholder="e.g. 47500"></div>
+        <div class="is-row"><label>City</label><input id="is_city" placeholder="e.g. Subang Jaya"></div>
+      </div>
+      <div class="is-row"><label>State</label>
+        <select id="is_state">
+          <option value="">— Select State —</option>
+          <option>Selangor</option><option>Kuala Lumpur</option><option>Putrajaya</option>
+          <option>Johor</option><option>Kedah</option><option>Kelantan</option>
+          <option>Melaka</option><option>Negeri Sembilan</option><option>Pahang</option>
+          <option>Penang</option><option>Perak</option><option>Perlis</option>
+          <option>Sabah</option><option>Sarawak</option><option>Terengganu</option>
+        </select>
+      </div>
+      <div class="is-2col">
+        <div class="is-row"><label>Phone</label><input id="is_phone" placeholder="e.g. 03-1234 5678"></div>
+        <div class="is-row"><label>Email</label><input id="is_email" placeholder="e.g. info@youmiqi.com"></div>
+      </div>
+      <div class="is-row"><label>Invoice Footer Note (optional)</label><input id="is_footer" placeholder="e.g. Thank you for dining with us!"></div>
+    </div>
+    <div class="is-foot">
+      <button class="btn btn-g" style="font-size:12px;padding:6px 14px" onclick="closeInvSettings()">Cancel</button>
+      <button class="btn btn-p" style="font-size:12px;padding:6px 14px" onclick="saveInvSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Export Modal ── -->
+<div class="is-overlay" id="exOverlay" onclick="if(event.target===this)closeExport()">
+  <div class="is-modal" style="width:456px">
+    <div class="is-head">
+      <div><h3>Export Transactions <small>Excel .xlsx</small></h3></div>
+      <button class="btn btn-g" style="padding:4px 10px;font-size:12px" onclick="closeExport()">✕</button>
+    </div>
+    <div class="is-body">
+      <div class="ex-scope" id="exScope"></div>
+
+      <div class="ex-grp">
+        <span class="ex-lbl">Content</span>
+        <label class="ex-opt on" id="exOptS">
+          <input type="radio" name="exMode" value="summary" checked onchange="onExMode()">
+          <span><span class="ot">Summary only</span>
+          <span class="os">One row per transaction — the table as it appears on screen, plus Sales / Refunds / Net totals</span></span>
+        </label>
+        <label class="ex-opt" id="exOptD">
+          <input type="radio" name="exMode" value="detail" onchange="onExMode()">
+          <span><span class="ot">Include expanded details</span>
+          <span class="os" id="exDetailSub">Adds a second sheet with every line item</span></span>
+        </label>
+      </div>
+
+      <div class="ex-grp">
+        <span class="ex-lbl">Include</span>
+        <label class="ex-chk">
+          <input type="checkbox" id="exPayCols" checked>Payment methods
+          <span class="cs">One column, per ticket</span>
+        </label>
+        <label class="ex-chk" id="exVoidRow" style="display:none">
+          <input type="checkbox" id="exVoid" onchange="renderExScope()">Void transactions
+          <span class="cs" id="exVoidCount"></span>
+        </label>
+      </div>
+    </div>
+    <div class="is-foot">
+      <button class="btn btn-g" style="font-size:12px;padding:6px 14px" onclick="closeExport()">Cancel</button>
+      <button class="btn btn-p" style="font-size:12px;padding:6px 14px" id="exGo" onclick="doExportOrders()">⬇ Download .xlsx</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- .page -->
+
+<script src="/datepicker.js?v=6"></script>
+<script src="/quota-meter.js?v=1"></script>
+<script src="/invoice-template.js?v=9"></script>
+<script>
+// ── Auth ──────────────────────────────────────────────────────────────────────
+const TOKEN = sessionStorage.getItem('merchantToken');
+if (!TOKEN) window.location.href = '/';
+const hdr = () => ({'Authorization': 'Bearer ' + TOKEN});
+
+// ── Stale session → out ─────────────────────────────────────────────────
+// The server keeps sessions in memory, so a restart invalidates every token while
+// the string stays in sessionStorage — and the check above accepts a token merely
+// for existing.  A 401 is the only reliable signal that the session is gone, so
+// catch it in one place: checking at each call site meant most of them missed it
+// and the page sat there looking logged in until something happened to fail.
+// /login is exempt — a 401 there just means wrong password.
+(function () {
+  const raw = window.fetch.bind(window);
+  let gone = false;
+  window.fetch = async (...args) => {
+    const res = await raw(...args);
+    if (res.status === 401 && !gone && !String(args[0] || '').includes('/login')) {
+      gone = true;            // one logout even when several requests fail at once
+      doLogout();
+    }
+    return res;
+  };
+})();
+
+// ── Invoice Settings cache (loaded from server on page load) ──────────────────
+let _invSettings = {};
+
+fetch('/api/version').then(r=>r.json()).then(d=>{
+  const e=document.getElementById('versionBadge'); if(e) e.textContent='v'+d.version;
+}).catch(()=>{});
+// The server keeps sessions in memory, so a restart invalidates every token while
+// the string stays in sessionStorage -- the check at the top of this file only sees
+// that string and lets the page render.  Treat a 401 here as "this session is gone"
+// and leave, instead of sitting on a page that looks logged in until something fails.
+fetch('/api/merchant/me',{headers:hdr()}).then(r=>{
+  if(r.status === 401) { doLogout(); return null; }
+  return r.json();
+}).then(d=>{
+  if(d && d.ok) document.getElementById('merchantName').textContent=d.name;
+}).catch(()=>{});
+
+fetch('/api/merchant/invoice-settings',{headers:hdr()}).then(r=>r.json()).then(d=>{
+  if(d.ok && d.settings) _invSettings = d.settings;
+}).catch(()=>{});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const r2  = n => Math.round((parseFloat(n)||0)*100)/100;
+const fm  = n => (parseFloat(n)||0).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc = s => (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const isRef = t => (t.ticketType||'').toUpperCase() === 'SELL_RETURN';
+// uid is an int64 whose last digits JSON.parse rounds off, so two tickets can
+// collide on String(t.uid). uidStr is the exact value the server sent — key
+// every lookup by it.
+const tid = t => t.uidStr || String(t.uid);
+
+function grossAmt(t) {
+  return r2((t.items||[]).reduce((s,i)=>s+r2(i.totalAmount||0),0) + r2(t.taxFee||0) + r2(t.serviceFee||0));
+}
+// Discount from Pospal discountDetails (matches 折扣分析 exactly: types 6=单品, 11=积分兑换, 12=整单)
+function itemDiscount(t) {
+  return r2((t.items||[]).reduce((s,i) => {
+    const dd = i.discountDetails||[];
+    if (dd.length) return s + r2(dd.reduce((ds,d)=>ds+r2(d.discountTotalAmount||d.discountAmount||0),0));
+    // fallback for items without discountDetails
+    const d = r2(r2((i.sellPrice||0)*(i.quantity||0)) - r2(i.totalAmount||0));
+    return s + (d > 0 ? d : 0);
+  }, 0));
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let ALL=[], PM={}, PAGE=1, START='', END='';
+const PS=50;
+new DateRangePicker('s','e',()=>{});
+
+// ── Filtering ─────────────────────────────────────────────────────────────────
+function fil() {
+  const tc = document.getElementById('typeFilter').value;
+  const pc = document.getElementById('payFilter').value;
+  const sn = document.getElementById('snSearch').value.trim().toLowerCase();
+  return ALL.filter(t => {
+    const inv = parseInt(t.invalid||0) === 1;
+    const ref = isRef(t);
+    if (tc === 'sale'   && (ref || inv))  return false;
+    if (tc === 'refund' && !ref)          return false;
+    if (tc === 'void'   && !inv)          return false;
+    if (pc !== 'all' && !(t.payments||[]).some(p=>p.code===pc)) return false;
+    if (sn && !(t.sn||'').toLowerCase().includes(sn)) return false;
+    return true;
+  });
+}
+function onFC() { PAGE=1; if(ALL.length) render(); }
+
+// ── Load ──────────────────────────────────────────────────────────────────────
+// Same quota badge as the other two pages: first click reads what's in memory, a
+// second click spends a call for the exact figure.  The bar below still reports what
+// each Load itself cost.
+QuotaMeter.mount({
+  into   : document.getElementById('quotaMeter'),
+  headers: hdr,
+});
+
+async function loadOrders() {
+  const s=document.getElementById('s').value, e=document.getElementById('e').value;
+  if (!s||!e) { showErr('Please select a date range.'); return; }
+  if (s>e)    { showErr('Start date must be before end date.'); return; }
+  showErr(''); ss('l');
+  document.getElementById('ldMsg').textContent = s + ' → ' + e;
+  document.getElementById('bLoad').disabled = true;
+  try {
+    const resp = await fetch('/api/merchant/orders?start='+s+'&end='+e, {headers:hdr()});
+    if (resp.status === 401) { doLogout(); return; }
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error||'Unknown error');
+    ALL=data.tickets||[]; PM=data.payMethods||{}; PAGE=1; START=s; END=e;
+    buildPM(); render(); ss('d');
+    updateFresh(data, e);
+  } catch(ex) {
+    showErr('Failed: '+ex.message); ss('e');
+  } finally {
+    document.getElementById('bLoad').disabled = false;
+  }
+}
+
+// ── Freshness + API quota note ───────────────────────────────────────────
+// Two things to report after a load: what it cost in Pospal quota, and — when the
+// range includes today's still-running business day — how much of the 30-min
+// cooldown is left before another live refresh is possible.
+let FRESH = null, FRESH_TIMER = null;
+
+function updateFresh(d, endDate) {
+  if (FRESH_TIMER) { clearInterval(FRESH_TIMER); FRESH_TIMER = null; }
+  const bar  = document.getElementById('freshBar');
+  const used = d.apiCallsUsed || 0;
+  const live = !!(d.bizToday && d.todayFetchedAt && endDate >= d.bizToday);
+  if (!used && !live) { FRESH = null; bar.style.display = 'none'; return; }
+  FRESH = {
+    used : used,
+    today: d.apiCallsToday || 0,
+    limit: d.apiCallsLimit || 300,
+    quota: d.quota || null,          // Pospal's own reading + this app's calls since
+    at   : d.todayFetchedAt,
+    cd   : d.cooldownSecs || 1800,
+    live : live,
+    // Tick against the server's clock, not the browser's — they can differ by minutes
+    skew : (Date.now()/1000) - (d.serverNow || Date.now()/1000),
+  };
+  // paintFresh reports whether a countdown is still running, so an already-expired
+  // cooldown never arms a timer that would just redraw the same sentence every second
+  if (paintFresh()) {
+    FRESH_TIMER = setInterval(() => {
+      if (!paintFresh() && FRESH_TIMER) { clearInterval(FRESH_TIMER); FRESH_TIMER = null; }
+    }, 1000);
+  }
+}
+
+function mmss(sec) {
+  return Math.floor(sec/60) + 'm ' + String(sec % 60).padStart(2,'0') + 's';
+}
+
+function paintFresh() {
+  const f = FRESH; if (!f) return false;
+  const bar = document.getElementById('freshBar');
+  let ticking = false;
+  let msg = f.used
+    ? `Fetched live from Pospal — this load used ${f.used} API call${f.used===1?'':'s'}. `
+    : `Served from the cached copy — no API quota used. `;
+  // The quota figure is an estimate on purpose: reading the true number from Pospal
+  // costs a call, so the last reading is a baseline and our own calls are added on.
+  // The full arithmetic goes in the tooltip to keep this line one line.
+  const q = f.quota;
+  if (q) {
+    msg += `Quota ≈${q.estUsed}/${q.limit} used today (${q.estLeft} left).`;
+    const bt = new Date(q.baseTs * 1000);
+    const hm = String(bt.getHours()).padStart(2,'0') + ':' + String(bt.getMinutes()).padStart(2,'0');
+    bar.title = `Pospal's own reading was ${q.baseUsed}/${q.limit} at ${hm}; this report has made `
+              + `${q.sinceBase} call${q.sinceBase===1?'':'s'} since. Anything else sharing this `
+              + `appId (member portal, other tools) counts at Pospal but not here, so the real `
+              + `figure can only be higher. Refresh the exact number with ↻ on the Sales Report page.`;
+  } else {
+    msg += `This report has used ${f.today} of ${f.limit} daily calls.`;
+    bar.title = `Pospal's own total for today hasn't been read yet, so this counts only calls made `
+              + `by this report. Press ↻ on the Sales Report page for the real figure (that `
+              + `reading itself costs one call).`;
+  }
+  if (f.live) {
+    const t  = new Date(f.at * 1000);
+    const hm = [t.getHours(), t.getMinutes(), t.getSeconds()]
+                 .map(n => String(n).padStart(2,'0')).join(':');
+    const left = Math.max(0, Math.ceil(f.cd - ((Date.now()/1000 - f.skew) - f.at)));
+    if (left > 0) {
+      msg += ` Today's transactions were already fetched at ${hm} — next live refresh available in ${mmss(left)}.`;
+      ticking = true;
+    } else {
+      msg += ` Today's transactions were fetched at ${hm}. Reload now to fetch the latest sales.`;
+    }
+  }
+  bar.textContent = msg;
+  bar.style.display = 'block';
+  return ticking;
+}
+
+// ── Pay filter dropdown ───────────────────────────────────────────────────────
+function buildPM() {
+  const codes = new Set();
+  ALL.forEach(t=>(t.payments||[]).forEach(p=>codes.add(p.code)));
+  const sel=document.getElementById('payFilter'), cur=sel.value;
+  sel.innerHTML='<option value="all">All Payment Methods</option>';
+  [...codes].sort().forEach(c=>{
+    const o=document.createElement('option'); o.value=c; o.textContent=PM[c]||c; sel.appendChild(o);
+  });
+  if([...codes].includes(cur)) sel.value=cur;
+}
+
+// ── Stats cards ───────────────────────────────────────────────────────────────
+function calcStats(tickets) {
+  let ord=0, net=0, tax=0, svc=0, disc=0, rnd=0;
+  tickets.forEach(t => {
+    if (parseInt(t.invalid||0)) return;
+    const sg = isRef(t) ? -1 : 1; ord++;
+    const n = r2(t.totalAmount||0);
+    net  += sg * n;
+    tax  += sg * r2(t.taxFee||0);
+    svc  += sg * r2(t.serviceFee||0);
+    disc += itemDiscount(t);
+    rnd  += sg * r2(t.rounding||0);
+  });
+  const ar = r2(net - tax);
+  const [sy,sm,sd]=START.split('-'), [ey,em,ed]=END.split('-');
+  document.getElementById('sOrd').textContent  = ord;
+  document.getElementById('sDr').textContent   = `${sd}/${sm}/${sy} – ${ed}/${em}/${ey}`;
+  document.getElementById('sAR').textContent   = 'RM '+fm(ar);
+  document.getElementById('sNet').textContent  = 'RM '+fm(net);
+  document.getElementById('sTax').textContent  = 'RM '+fm(tax);
+  document.getElementById('sSvc').textContent  = 'RM '+fm(svc);
+  document.getElementById('sDisc').textContent = disc > 0.005 ? 'RM '+fm(disc) : '—';
+  document.getElementById('sRnd').textContent  = Math.abs(rnd) > 0.001 ? (rnd>0?'(':'')+'RM '+fm(Math.abs(rnd))+(rnd>0?')':'') : '—';
+  document.getElementById('statsRow').style.display = '';
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const ft = fil();
+  const total = Math.max(1, Math.ceil(ft.length/PS));
+  PAGE = Math.min(PAGE, total);
+  const pg = ft.slice((PAGE-1)*PS, PAGE*PS);
+
+  document.getElementById('tcount').textContent =
+    ft.length === ALL.length ? ft.length+' transactions' : ft.length+' / '+ALL.length+' transactions';
+
+  calcStats(ft);
+  resetExpandBtn();
+  renderRows(pg);
+  renderFooter(ft);
+  renderPg(PAGE, total);
+}
+
+// ── Render rows ───────────────────────────────────────────────────────────────
+function renderRows(tickets) {
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+  window._TM = window._TM || {};
+
+  if (!tickets.length) {
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td colspan="12" style="text-align:center;padding:36px;color:#a1a1aa;font-size:12px">No orders match the current filters</td>';
+    tb.appendChild(tr); return;
+  }
+
+  tickets.forEach(t => {
+    window._TM[tid(t)] = t;
+    const ref  = isRef(t);
+    const inv  = parseInt(t.invalid||0)===1;
+    const g    = grossAmt(t);
+    const net  = r2(t.totalAmount||0);
+    const net2 = r2(net - r2(t.taxFee||0));
+    const tax  = r2(t.taxFee||0);
+    const disc = itemDiscount(t);
+    const qty  = (t.items||[]).reduce((s,i)=>s+(i.quantity||0),0);
+    const ca   = (t.cashier||{}).name||'—';
+    // customerName is absent until the server has the member cached; hydrateMembers fills it in
+    const mb   = !t.customerUidStr ? '—' : (t.customerName != null ? (t.customerName || '—') : '…');
+    const [dp,tp] = (t.datetime||'').split(' ');
+    const [y,mo,dd] = (dp||'').split('-');
+
+    const tr=document.createElement('tr');
+    tr.className='trow'+(ref?' refrow':'')+(inv?' invrow':'');
+    tr.dataset.uid=tid(t);
+    tr.innerHTML=`
+      <td class="c"><button class="xbtn" onclick="tog(this,'${esc(tid(t))}')" title="View items">
+        <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </button></td>
+      <td class="mono dim" style="font-size:10.5px">${esc(t.sn||'—')}</td>
+      <td class="mono" style="font-size:11px">
+        <span>${dp?dd+'/'+mo+'/'+y:'—'}</span>
+        <span style="color:#a1a1aa;margin-left:5px">${tp?tp.slice(0,5):''}</span>
+      </td>
+      <td><span class="bdg ${ref?'refund':'sale'}">${ref?'Refund':'Sale'}</span></td>
+      <td class="dim" style="font-size:11px">${esc(ca)}</td>
+      <td class="dim mbcell" data-cuid="${esc(t.customerUidStr||'')}" style="font-size:11px">${esc(mb)}</td>
+      <td class="c mono" style="font-size:11px">${qty}</td>
+      <td class="r mono dim" style="font-size:11px">${fm(g)}</td>
+      <td class="net">RM ${fm(net)}</td>
+      <td class="r mono" style="font-size:11px">${fm(net2)}</td>
+      <td class="r mono dim" style="font-size:11px;color:#0369a1">${tax>0.001?fm(tax):'—'}</td>
+      <td class="${disc>0.005?'dsc':'r mono dim'}">${disc>0.005?fm(disc):'—'}</td>
+    `;
+    tb.appendChild(tr);
+  });
+  hydrateMembers(tickets);
+}
+
+// ── Fill in member names the server didn't have cached ────────────────────────
+async function hydrateMembers(tickets) {
+  const need = [...new Set(tickets.filter(t => t.customerUidStr && t.customerName == null)
+                                  .map(t => t.customerUidStr))];
+  if (!need.length) return;
+  let names = {};
+  try {
+    const r = await fetch('/api/merchant/customers', {
+      method: 'POST', headers: {'Content-Type': 'application/json', ...hdr()},
+      body: JSON.stringify({uids: need})
+    });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!d.ok) return;
+    names = d.names || {};
+  } catch(e) { return; }
+  // Members the lookup couldn't resolve get a blank name so we don't ask again this session
+  need.forEach(u => { if (names[u] === undefined) names[u] = ''; });
+  ALL.forEach(t => { if (t.customerUidStr in names) t.customerName = names[t.customerUidStr]; });
+  document.querySelectorAll('#tbody td.mbcell').forEach(td => {
+    if (td.dataset.cuid in names) td.textContent = names[td.dataset.cuid] || '—';
+  });
+}
+
+// ── Expand / collapse single row ──────────────────────────────────────────────
+function tog(btn, uid) {
+  const row = btn.closest('tr');
+  const nx  = row.nextElementSibling;
+  if (nx && nx.classList.contains('drow')) {
+    nx.remove(); btn.classList.remove('open'); return;
+  }
+  btn.classList.add('open');
+  const t = window._TM && window._TM[uid]; if(!t) return;
+  const dr=document.createElement('tr'); dr.className='drow';
+  const td=document.createElement('td'); td.colSpan=12; td.innerHTML=buildDetail(t);
+  dr.appendChild(td); row.insertAdjacentElement('afterend',dr);
+}
+
+// ── Expand All / Collapse All ─────────────────────────────────────────────────
+function toggleExpandAll() {
+  const btn = document.getElementById('btnExpandAll');
+  if (btn.dataset.state === 'open') {
+    // Collapse all
+    document.querySelectorAll('#tbody tr.drow').forEach(r=>r.remove());
+    document.querySelectorAll('#tbody .xbtn.open').forEach(b=>b.classList.remove('open'));
+    btn.textContent = 'Expand All'; btn.dataset.state = '';
+  } else {
+    // Expand all
+    document.querySelectorAll('#tbody tr.trow').forEach(row => {
+      const xb = row.querySelector('.xbtn');
+      if (xb && !xb.classList.contains('open')) tog(xb, String(row.dataset.uid));
+    });
+    btn.textContent = 'Collapse All'; btn.dataset.state = 'open';
+  }
+}
+function resetExpandBtn() {
+  const btn = document.getElementById('btnExpandAll');
+  if (btn) { btn.textContent = 'Expand All'; btn.dataset.state = ''; }
+}
+
+// ── Detail block ──────────────────────────────────────────────────────────────
+function buildDetail(t) {
+  const items = t.items||[];
+  const tax   = r2(t.taxFee||0);
+  const svc   = r2(t.serviceFee||0);
+  const rnd   = r2(t.rounding||0);
+  const uid   = tid(t);
+
+  const irows = items.map(i => {
+    const orig = r2((i.sellPrice||0)*(i.quantity||0));
+    const act  = r2(i.totalAmount||0);
+    const dis  = r2(orig-act);
+    return `<tr class="irow">
+      <td>${esc(i.name||'—')}<span class="bc">${i.productBarcode?'('+esc(i.productBarcode)+')':''}</span>${
+        (i.remark||'').trim() ? `<div class="irmk">${esc(i.remark.trim())}</div>` : ''}</td>
+      <td class="r mono">${i.quantity}</td>
+      <td class="r mono">${fm(i.sellPrice||0)}</td>
+      <td class="r mono">${fm(act)}</td>
+      <td class="r mono" style="color:${dis>0.005?'var(--re)':'#a1a1aa'}">${dis>0.005?fm(dis):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  let arows='';
+  if (Math.abs(rnd)>0.001) arows+=`<tr class="arow"><td class="albl">Rounding</td><td></td><td></td><td class="aval">${rnd>0?'('+fm(rnd)+')':'+'+fm(Math.abs(rnd))}</td><td></td></tr>`;
+  if (tax>0.001) arows+=`<tr class="arow"><td class="albl">Service Tax</td><td></td><td></td><td class="aval" style="color:#0369a1">${fm(tax)}</td><td></td></tr>`;
+  if (svc>0.001) arows+=`<tr class="arow"><td class="albl">Service Charge</td><td></td><td></td><td class="aval" style="color:var(--or)">${fm(svc)}</td><td></td></tr>`;
+
+  const tc     = (t.ticketOnTable||{}).tableCardNo;
+  const tpill  = tc ? `<span class="ipill tbl"><span class="pk">Table</span><span class="pv">${esc(tc)}</span></span>` : '';
+  const rpill  = Math.abs(rnd)>0.001 ? `<span class="ipill"><span class="pk">Rounding</span><span class="pv">${rnd>0?'−':'+'}${fm(Math.abs(rnd))}</span></span>` : '';
+  const tkRmk  = (t.remark||'').trim();
+  const kpill  = tkRmk ? `<span class="ipill rmk"><span class="pk">Remark</span><span class="pv">${esc(tkRmk)}</span></span>` : '';
+  const ppills = (t.payments||[]).map(p=>
+    `<span class="ipill pay"><span class="pk">Pay</span><span class="pv">${esc(PM[p.code]||p.code)} ${fm(p.amount||0)}</span></span>`
+  ).join('');
+
+  return `<div class="din">
+    <table class="dtbl">
+      <thead><tr>
+        <th style="width:auto">Item</th>
+        <th class="r" style="width:48px">Qty</th>
+        <th class="r" style="width:86px">Unit Price</th>
+        <th class="r" style="width:86px">Total</th>
+        <th class="r" style="width:76px">Discount</th>
+      </tr></thead>
+      <tbody>${irows}${arows}</tbody>
+    </table>
+    <div class="ibar-row">${tpill}${kpill}${rpill}${ppills}</div>
+    <div style="margin-top:10px">
+      <label style="font-size:11px;color:#71717a;font-weight:600;display:block;margin-bottom:4px">Additional Remark (optional — yours, not from Pospal)</label>
+      <textarea id="remark_${uid}" placeholder="Add an additional remark for this invoice…" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #e4e4e7;border-radius:6px;resize:vertical;min-height:52px;font-family:inherit;color:#18181b;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='#a1a1aa'" onblur="this.style.borderColor='#e4e4e7'"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-g" style="font-size:11px;padding:5px 12px" onclick="printInvoice('${uid}')">🖨 Print / PDF</button>
+      <button class="btn btn-g" style="font-size:11px;padding:5px 12px;color:#16a34a;border-color:#86efac" onclick="waInvoice('${uid}',(document.getElementById('remark_${uid}')||{}).value||'')">📱 WhatsApp</button>
+    </div>
+  </div>`;
+}
+
+// ── Export to Excel ───────────────────────────────────────────────────────────
+// The filters live here, not on the server, so the page sends the exact uid list
+// to export.  Paging is display-only: this always exports every filtered result.
+function exportTickets() {
+  const list = fil();
+  const vb = document.getElementById('exVoid');
+  return (vb && vb.checked) ? list : list.filter(t => parseInt(t.invalid||0) !== 1);
+}
+
+function filterSummary() {
+  const parts = [];
+  const tc = document.getElementById('typeFilter');
+  const pc = document.getElementById('payFilter');
+  const sn = document.getElementById('snSearch').value.trim();
+  if (tc.value !== 'all') parts.push(tc.options[tc.selectedIndex].text);
+  if (pc.value !== 'all') parts.push(pc.options[pc.selectedIndex].text);
+  if (sn) parts.push('"' + sn + '"');
+  return parts.length ? parts.join(' · ') : 'None';
+}
+
+function renderExScope() {
+  const list = exportTickets();
+  const n = list.length;
+  const [sy,sm,sd] = START.split('-'), [ey,em,ed] = END.split('-');
+  document.getElementById('exScope').innerHTML =
+    `<div><span class="k">Range</span><span class="v">${sd}/${sm}/${sy} – ${ed}/${em}/${ey}</span></div>
+     <div><span class="k">Filters</span><span class="v">${esc(filterSummary())}</span></div>
+     <div><span class="k">Exporting</span><span class="cnt">${n} transaction${n===1?'':'s'}</span>
+       <span style="font-size:11px;color:#9a3412">— all filtered results, not just this page</span></div>`;
+  const items = list.reduce((s,t) => s + (t.items||[]).length, 0);
+  document.getElementById('exDetailSub').textContent =
+    `Adds a second sheet with every line item — ${items} item row${items===1?'':'s'}`;
+  document.getElementById('exGo').disabled = n === 0;
+}
+
+function onExMode() {
+  const detail = document.querySelector('input[name="exMode"]:checked').value === 'detail';
+  document.getElementById('exOptS').classList.toggle('on', !detail);
+  document.getElementById('exOptD').classList.toggle('on',  detail);
+}
+
+function openExport() {
+  const voids = fil().filter(t => parseInt(t.invalid||0) === 1).length;
+  // Void tickets are excluded by default — the stats cards skip them too — but
+  // pre-tick the box when the user explicitly filtered for Void, or the export
+  // would come out empty.
+  const vBox = document.getElementById('exVoid');
+  vBox.checked = document.getElementById('typeFilter').value === 'void';
+  document.getElementById('exVoidRow').style.display = voids ? '' : 'none';
+  document.getElementById('exVoidCount').textContent = `${voids} in this selection`;
+  renderExScope();
+  document.getElementById('exOverlay').classList.add('open');
+}
+function closeExport() { document.getElementById('exOverlay').classList.remove('open'); }
+
+async function doExportOrders() {
+  const list = exportTickets();
+  if (!list.length) return;
+  const detail = document.querySelector('input[name="exMode"]:checked').value === 'detail';
+  const btn = document.getElementById('exGo');
+  btn.disabled = true; btn.textContent = 'Preparing…';
+  try {
+    const r = await fetch('/api/merchant/orders/export', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', ...hdr()},
+      body: JSON.stringify({
+        start: START, end: END,
+        uids: list.map(tid),
+        detail: detail,
+        payCols: document.getElementById('exPayCols').checked
+      })
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(()=>({}));
+      alert(d.error || 'Export failed'); return;
+    }
+    const blob = await r.blob();
+    const cd = r.headers.get('Content-Disposition') || '';
+    const fn = cd.match(/filename="(.+?)"/);
+    const a  = document.createElement('a');
+    a.download = fn ? fn[1] : `Transactions_${START}_${END}.xlsx`;
+    a.href = URL.createObjectURL(blob);
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    closeExport();
+  } catch(ex) {
+    alert('Export error: ' + ex.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '⬇ Download .xlsx';
+  }
+}
+
+// ── Invoice Settings ──────────────────────────────────────────────────────────
+function getInvSettings() {
+  return _invSettings;
+}
+async function openInvSettings() {
+  try {
+    const resp = await fetch('/api/merchant/invoice-settings', {headers: hdr()});
+    const d = await resp.json();
+    if (d.ok && d.settings) _invSettings = d.settings;
+  } catch(e) {}
+  const s = _invSettings;
+  ['name','ssm','sst','addr1','addr2','post','city','phone','email','footer'].forEach(k => {
+    const el = document.getElementById('is_' + k);
+    if (el) el.value = s[k] || '';
+  });
+  const stEl = document.getElementById('is_state');
+  if (stEl) stEl.value = s.state || '';
+  document.getElementById('isOverlay').classList.add('open');
+}
+function closeInvSettings() {
+  document.getElementById('isOverlay').classList.remove('open');
+}
+async function saveInvSettings() {
+  const s = {};
+  ['name','ssm','sst','addr1','addr2','post','city','state','phone','email','footer'].forEach(k => {
+    const el = document.getElementById('is_' + k);
+    if (el) s[k] = el.value.trim();
+  });
+  const btn = document.querySelector('#isOverlay .btn-p');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const resp = await fetch('/api/merchant/invoice-settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', ...hdr()},
+      body: JSON.stringify(s)
+    });
+    const d = await resp.json();
+    if (!d.ok) { alert('Failed to save. Please try again.'); return; }
+    _invSettings = s;
+  } catch(e) { alert('Failed to save. Please try again.'); return; }
+  finally { if (btn) { btn.disabled = false; btn.textContent = 'Save Settings'; } }
+  closeInvSettings();
+}
+
+// ── Build Invoice HTML (shared engine: /invoice-template.js) ──────────────────
+function buildInvoiceHtml(t, autoprint, remark='', member=null) {
+  const fallbackName = document.getElementById('merchantName').textContent || '3FS Technology';
+  return InvoiceTemplate.build(t, getInvSettings(), {autoprint, remark, member, PM, fallbackName});
+}
+
+// ── Fetch member helper ───────────────────────────────────────────────────────
+async function fetchMember(t) {
+  if (!t.customerUidStr) return null;
+  try {
+    const r = await fetch('/api/merchant/customer?uid=' + encodeURIComponent(t.customerUidStr), {headers: hdr()});
+    if (!r.ok) return null;
+    const d = await r.json();
+    return (d.ok && d.customer) ? d.customer : null;
+  } catch(e) { return null; }
+}
+
+// ── Print Invoice ─────────────────────────────────────────────────────────────
+async function printInvoice(uid) {
+  const t = window._TM && window._TM[uid]; if (!t) return;
+  // Open window synchronously (must be in user-gesture context before any await)
+  const w = window.open('', '_blank', 'width=720,height=840');
+  if (!w) { alert('Please allow popups to print invoices.'); return; }
+  w.document.write('<p style="font-family:Arial;padding:40px;color:#71717a">Loading invoice…</p>');
+  const remark = ((document.getElementById('remark_' + uid) || {}).value || '').trim();
+  const member = await fetchMember(t);
+  const html = buildInvoiceHtml(t, true, remark, member);
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
+// ── WhatsApp Invoice ──────────────────────────────────────────────────────────
+async function waInvoice(uid, remark='') {
+  remark = (remark || '').trim();
+  const t = window._TM && window._TM[uid]; if (!t) return;
+  // Open WhatsApp window synchronously before any await
+  const waWin = window.open('', '_blank');
+  if (!waWin) { alert('Please allow popups for WhatsApp.'); return; }
+  waWin.document.write('<p style="font-family:Arial;padding:40px;color:#71717a">Preparing WhatsApp message…</p>');
+
+  const s = getInvSettings();
+  const merch = s.name || document.getElementById('merchantName').textContent || '3FS Technology';
+  const [dp,tp] = (t.datetime||'').split(' ');
+  const [y,mo,dd] = (dp||'').split('-');
+  const tax = r2(t.taxFee||0), svc = r2(t.serviceFee||0), rnd = r2(t.rounding||0);
+  const disc = itemDiscount(t), net = r2(t.totalAmount||0);
+  const tc = (t.ticketOnTable||{}).tableCardNo||'';
+  const addrParts = [s.addr1, s.addr2, [s.post, s.city].filter(Boolean).join(' '), s.state].filter(Boolean);
+
+  const member = await fetchMember(t);
+
+  // Upload invoice HTML to server, get shareable link (valid 24h)
+  let invLink = '';
+  try {
+    const html = buildInvoiceHtml(t, false, remark, member);
+    const resp = await fetch('/api/invoice-html', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', ...hdr()},
+      body: JSON.stringify({html})
+    });
+    if (resp.ok) {
+      const {token} = await resp.json();
+      invLink = location.origin + '/api/invoice?token=' + token;
+    }
+  } catch(e) { /* non-fatal — message still goes without link */ }
+
+  const lines = [
+    `*${merch}*`,
+    ...addrParts,
+    s.phone ? `Tel: ${s.phone}` : null,
+    s.ssm   ? `SSM: ${s.ssm}`   : null,
+    s.sst   ? `SST Reg: ${s.sst}` : null,
+    '',
+    `*TAX INVOICE*`,
+    `Receipt No: ${t.sn||'—'}`,
+    `Date: ${dp?`${dd}/${mo}/${y}`:''} ${tp?tp.slice(0,5):''}`.trim(),
+    tc ? `Table: ${tc}` : null,
+    member ? `Member: ${member.name||''}${member.phone?' · '+member.phone:''}` : null,
+    '',
+    '*Items:*',
+    ...(t.items||[]).map(i => {
+      const act = r2(i.totalAmount||0);
+      const dis = r2(r2((i.sellPrice||0)*(i.quantity||0)) - act);
+      return `• ${i.name||'—'} ×${i.quantity}  RM ${fm(act)}${dis>0.005?' (Disc: RM'+fm(dis)+')':''}`;
+    }),
+    '',
+    Math.abs(rnd)>0.001 ? `Rounding: ${rnd>0?'('+fm(rnd)+')':'+'+fm(Math.abs(rnd))}` : null,
+    svc>0.001  ? `Service Charge: RM ${fm(svc)}` : null,
+    tax>0.001  ? `Service Tax (SST): RM ${fm(tax)}` : null,
+    disc>0.005 ? `Discount: −RM ${fm(disc)}`       : null,
+    `──────────────────`,
+    `*TOTAL: RM ${fm(net)}*`,
+    '',
+    ...(t.payments||[]).map(p=>`Payment: ${PM[p.code]||p.code}  RM ${fm(p.amount||0)}`),
+    '',
+    remark ? `📝 Additional Remark: ${remark}` : null,
+    '',
+    invLink ? `📄 View Invoice: ${invLink}\n(Link valid 24 hours)` : null,
+    '',
+    s.footer || 'Thank you for your purchase! 🙏',
+  ].filter(l => l !== null).join('\n');
+
+  waWin.location.href = 'https://wa.me/?text=' + encodeURIComponent(lines);
+}
+
+// ── Three-row summary footer ──────────────────────────────────────────────────
+function renderFooter(ft) {
+  // Void tickets are cancelled, so their money stays out of Sales and out of the
+  // net — they get their own informational row instead. Same split as the Type
+  // column (void wins over refund), so the three counts add back up to the rows.
+  const isVoid  = t => parseInt(t.invalid||0) === 1;
+  const voids   = ft.filter(isVoid);
+  const refunds = ft.filter(t => !isVoid(t) &&  isRef(t));
+  const sales   = ft.filter(t => !isVoid(t) && !isRef(t));
+
+  function agg(list) {
+    let cnt=0, g=0, net=0, net2=0, tax=0, svc=0, disc=0;
+    list.forEach(t => {
+      cnt++;
+      const ga = grossAmt(t);
+      const n  = r2(t.totalAmount||0);
+      const tx = r2(t.taxFee||0);
+      g    += ga;
+      net  += n;
+      net2 += r2(n - tx);
+      tax  += tx;
+      svc  += r2(t.serviceFee||0);
+      disc += itemDiscount(t);
+    });
+    return {cnt,g:r2(g),net:r2(net),net2:r2(net2),tax:r2(tax),svc:r2(svc),disc:r2(disc)};
+  }
+
+  const s  = agg(sales);
+  const rf = agg(refunds);
+  const vd = agg(voids);
+  const net = {
+    cnt:  s.cnt + rf.cnt,
+    g:    r2(s.g    - rf.g),
+    net:  r2(s.net  - rf.net),
+    net2: r2(s.net2 - rf.net2),
+    tax:  r2(s.tax  - rf.tax),
+    svc:  r2(s.svc  - rf.svc),
+    disc: r2(s.disc - rf.disc),
+  };
+
+  function row(cls, lbl, d, sign=1, style='') {
+    const n = v => `<td class="r mono"${style}>${fm(r2(sign*v))}</td>`;
+    return `<tr class="${cls}">
+      <td></td>
+      <td class="row-lbl" colspan="6"${style}>${lbl} <span style="font-weight:400;font-size:11px">(${d.cnt} orders)</span></td>
+      ${n(d.g)}${n(d.net)}${n(d.net2)}${n(d.tax)}
+      <td class="r mono"${style}>${d.disc>0.005?fm(d.disc):'—'}</td>
+    </tr>`;
+  }
+
+  // Reads top-down as an arithmetic: Sales minus Refunds rules off to Net Total.
+  // Voids sits below the rule and only shows when there actually are any.
+  document.getElementById('tfoot').innerHTML =
+    row('fs-sale',   'Sales',     s)      +
+    row('fs-refund', 'Refunds',   rf, -1) +
+    row('fs-net',    'Net Total', net)    +
+    (vd.cnt ? row('fs-void', 'Voids', vd) : '');
+}
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+function renderPg(p,t) {
+  const b=document.getElementById('pgbar');
+  if(t<=1){b.innerHTML='';return;}
+  b.innerHTML=`
+    <button class="pgbtn" onclick="gp(1)" ${p===1?'disabled':''}>« First</button>
+    <button class="pgbtn" onclick="gp(${p-1})" ${p===1?'disabled':''}>‹ Prev</button>
+    <span class="pginfo">Page ${p} of ${t}</span>
+    <button class="pgbtn" onclick="gp(${p+1})" ${p===t?'disabled':''}>Next ›</button>
+    <button class="pgbtn" onclick="gp(${t})" ${p===t?'disabled':''}>Last »</button>
+  `;
+}
+function gp(n){PAGE=n;render();document.querySelector('.tc').scrollIntoView({behavior:'smooth',block:'start'})}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function ss(s){
+  document.getElementById('sv0').style.display = s==='e' ? '' : 'none';
+  document.getElementById('sv1').style.display = s==='l' ? '' : 'none';
+  document.getElementById('sv2').style.display = s==='d' ? '' : 'none';
+}
+function showErr(m){const e=document.getElementById('errBar');e.style.display=m?'':'none';e.textContent=m}
+function doLogout(){sessionStorage.removeItem('merchantToken');sessionStorage.removeItem('merchantName');window.location.href='/'}
+
+// ── Default dates (last 7 days) ───────────────────────────────────────────────
+(()=>{
+  const t=new Date(), f=new Date(t); f.setDate(t.getDate()-6);
+  const fmt=d=>d.toISOString().slice(0,10);
+  document.getElementById('s').value=fmt(f);
+  document.getElementById('e').value=fmt(t);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# core.autocrlf is true on the dev machine, which would hand out CRLF on checkout.
+# Everything here runs on Linux: a CRLF shebang makes bash fail with
+# "bad interpreter: /bin/bash^M", and run.py is executed directly by systemd.
+# Pin the working tree to LF so a clone is deployable as-is.
+* text=auto eol=lf
+
+# Binary — never touch these
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.xlsx binary
+*.gz   binary
+*.zip  binary

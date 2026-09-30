@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3FS Technology · Sales Report Login</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--or:#f60;--dk:#18181b;--bd:#e4e4e7;--bg:#f4f4f5;--wh:#fff;--re:#dc2626;--gy:#71717a}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;background:var(--bg);min-height:100vh;display:flex;flex-direction:column}
+
+.topbar{background:var(--dk);height:52px;display:flex;align-items:center;padding:0 24px}
+.brand{font-weight:700;font-size:15px;color:var(--or);letter-spacing:.5px}
+.brand small{color:#71717a;font-weight:400;font-size:11px;margin-left:8px}
+
+.wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+
+.card{background:var(--wh);border:1px solid var(--bd);border-radius:12px;padding:40px;width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+
+.logo{text-align:center;margin-bottom:28px}
+.logo .icon{width:52px;height:52px;background:var(--or);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
+.logo .icon svg{fill:#fff}
+.logo h1{font-size:20px;font-weight:700;color:var(--dk)}
+.logo p{font-size:12px;color:var(--gy);margin-top:4px}
+
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:11px;font-weight:700;color:var(--gy);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.form-row input{width:100%;border:1px solid var(--bd);border-radius:7px;padding:10px 12px;font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s}
+.form-row input:focus{border-color:var(--or);box-shadow:0 0 0 3px rgba(255,102,0,.12)}
+
+.btn{width:100%;border:none;border-radius:7px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;background:var(--or);color:#fff;transition:opacity .15s;margin-top:4px}
+.btn:hover:not(:disabled){opacity:.87}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.err{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 13px;color:var(--re);font-size:12px;margin-top:12px;display:none}
+
+.footer{text-align:center;color:var(--gy);font-size:11px;margin-top:24px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">3FS TECHNOLOGY <small>Sales Report Portal</small></div>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <div class="logo">
+      <div class="icon">
+        <svg width="26" height="26" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+      </div>
+      <h1>Sales Report</h1>
+      <p>Sign in with your merchant account</p>
+    </div>
+
+    <div class="form-row">
+      <label>Username</label>
+      <input type="text" id="account" placeholder="e.g. lcc11888" autocomplete="username"
+             onkeydown="if(event.key==='Enter')document.getElementById('pw').focus()">
+    </div>
+    <div class="form-row">
+      <label>Password</label>
+      <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+
+    <button class="btn" id="bLogin" onclick="doLogin()">Sign In</button>
+    <div class="err" id="errMsg"></div>
+
+    <div class="footer">Powered by 3FS Technology &nbsp;·&nbsp; <span id="versionBadge"></span></div>
+  </div>
+</div>
+
+<script>
+fetch('/api/version').then(r=>r.json()).then(d=>{const el=document.getElementById('versionBadge');if(el)el.textContent='v'+d.version;}).catch(()=>{});
+// If already logged in, go to report
+const tok = sessionStorage.getItem('merchantToken');
+if (tok) {
+  fetch('/api/merchant/me', {headers: {'Authorization': 'Bearer ' + tok}})
+    .then(r => { if (r.ok) window.location.href = '/report'; })
+    .catch(() => {});
+}
+
+async function doLogin() {
+  const account = document.getElementById('account').value.trim();
+  const pw      = document.getElementById('pw').value;
+  const errEl   = document.getElementById('errMsg');
+  const btn     = document.getElementById('bLogin');
+  errEl.style.display = 'none';
+
+  if (!account || !pw) {
+    errEl.textContent = 'Please enter username and password.';
+    errEl.style.display = 'block'; return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const r = await fetch('/api/merchant/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({account, password: pw})
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Login failed');
+    sessionStorage.setItem('merchantToken', d.token);
+    sessionStorage.setItem('merchantName',  d.name);
+    window.location.href = '/report';
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+</script>
+</body>
+</html>

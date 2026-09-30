@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin · 3FS Technology</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--or:#f60;--dk:#18181b;--gy:#71717a;--bd:#e4e4e7;--bg:#fafafa;--wh:#fff;--re:#dc2626;--gr:#16a34a}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;background:var(--bg);color:var(--dk)}
+
+.topbar{background:var(--dk);height:52px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100}
+.brand{font-weight:700;font-size:15px;color:var(--or);letter-spacing:.5px}
+.topbar nav{display:flex;gap:2px;margin-left:auto}
+.topbar nav a{color:#a1a1aa;text-decoration:none;padding:6px 12px;border-radius:6px;font-size:13px}
+.topbar nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topbar nav a.on{color:var(--or)}
+
+/* ── Login ── */
+#loginWrap{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 52px)}
+.login-card{background:var(--wh);border:1px solid var(--bd);border-radius:10px;padding:36px 40px;width:360px;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.login-card h2{font-size:18px;font-weight:700;margin-bottom:6px}
+.login-card p{color:var(--gy);font-size:12px;margin-bottom:24px}
+
+/* ── Admin ── */
+#adminWrap{display:none}
+.page{padding:20px 24px;max-width:1200px;margin:0 auto}
+
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.toolbar h1{font-size:18px;font-weight:700;margin-right:auto}
+
+.card{background:var(--wh);border:1px solid var(--bd);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;margin-bottom:16px}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.card-head h2{font-size:13px;font-weight:700}
+
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+thead th{background:#f4f4f5;color:var(--gy);padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);white-space:nowrap;overflow:hidden}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s}
+tbody tr:last-child{border-bottom:0}
+tbody tr:hover{background:#fafafa}
+td{padding:11px 14px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td.actions{text-align:right;white-space:nowrap;width:290px}
+td.mono{font-family:monospace;font-size:12px;color:var(--gy)}
+.empty-td{text-align:center;color:var(--gy);padding:40px!important;white-space:normal}
+.col-num{width:48px}.col-name{width:24%}.col-user{width:14%}
+.col-status{width:100px}.col-sales{width:130px;text-align:right}
+.col-act{width:290px}
+
+/* Status filter pills */
+.filter-pills{display:flex;gap:4px}
+.pill{border:1px solid var(--bd);border-radius:99px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;background:var(--wh);color:var(--gy);transition:all .15s}
+.pill:hover{border-color:#aaa;color:var(--dk)}
+.pill.on{background:var(--or);border-color:var(--or);color:#fff}
+
+/* ── Forms & Buttons ── */
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:11px;font-weight:700;color:var(--gy);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.form-row input{width:100%;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:13px;outline:none;background:var(--wh)}
+.form-row input:focus{border-color:var(--or);box-shadow:0 0 0 2px rgba(255,102,0,.15)}
+.form-row input.mono{font-family:monospace;font-size:12px}
+.form-row textarea{width:100%;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:11.5px;outline:none;background:#fafafa;font-family:monospace;resize:vertical;min-height:80px;line-height:1.5}
+.form-row textarea:focus{border-color:var(--or);box-shadow:0 0 0 2px rgba(255,102,0,.15)}
+.parse-hint{font-size:11px;color:var(--gy);margin-top:4px}
+.parsed-ok{font-size:11px;color:var(--gr);margin-top:4px;display:none}
+.section-div{border-top:1px solid var(--bd);margin:16px 0 14px;padding-top:14px}
+.section-div span{font-size:11px;font-weight:700;color:var(--gy);text-transform:uppercase;letter-spacing:.4px}
+.section-div.quota-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.quota-head .quota-head-r{display:flex;align-items:center;gap:10px}
+.quota-head .quota-when{font-size:10.5px;font-weight:500;color:var(--gy);text-transform:none;letter-spacing:0;white-space:nowrap}
+.btn-mini{background:none;border:1px solid var(--bd);border-radius:6px;color:var(--gy);font-size:11px;font-weight:600;padding:4px 10px;cursor:pointer;transition:color .15s,border-color .15s}
+.btn-mini:hover{color:var(--dk);border-color:#a1a1aa}
+.btn-mini:disabled{opacity:.5;cursor:not-allowed}
+.quota-idle{font-size:11.5px;color:var(--gy);line-height:1.6}
+.quota-now{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.quota-now small{font-size:11px;font-weight:600;color:var(--gy);margin-left:8px;letter-spacing:0}
+.quota-bar{height:4px;background:#f4f4f5;border-radius:2px;overflow:hidden;margin:9px 0 5px}
+.quota-bar i{display:block;height:100%;border-radius:2px}
+.quota-note{font-size:10.5px;color:var(--gy);margin-bottom:12px;line-height:1.5}
+.quota-log{width:100%;border-collapse:collapse;font-size:12px}
+.quota-log td{padding:7px 2px;border-top:1px solid var(--bd);color:var(--gy);white-space:nowrap}
+.quota-log .qdow{width:32px;color:#a1a1aa}
+.quota-log .quse{text-align:right;font-family:monospace}
+.quota-log .qbar{width:70px;padding-left:12px}
+.quota-log .qbar span{display:flex;height:3px;background:#ececef;border-radius:2px;overflow:hidden}
+.quota-log .qbar span i{display:block;height:100%;background:#8a8a92}
+.quota-log .qbar span b{display:block;height:100%;background:#e2e2e7}
+.quota-log tr.today td{color:var(--dk);font-weight:700}
+.quota-log tr.today .qbar span i{background:var(--or)}
+.quota-log tr.qclick{cursor:pointer}
+.quota-log tr.qclick:hover td{background:#fafafa}
+.quota-log .quse em{font-style:normal;font-weight:400;color:#a1a1aa}
+.quota-log .qchev{color:#c4c4c8;font-size:9px;margin-left:5px}
+.quota-log tr.qdetail td{padding:0 0 7px;border-top:0}
+.qd-box{background:#fafafa;border:1px solid var(--bd);border-radius:6px;padding:7px 10px}
+.qd-line{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:11px;padding:4px 0;color:var(--gy);font-weight:400}
+.qd-line>span:last-child{font-family:monospace;white-space:nowrap;flex-shrink:0}
+.qd-line.qd-total{border-top:1px solid var(--bd);margin-top:5px;padding-top:6px;color:var(--dk);font-weight:700}
+.qd-id{font-family:monospace;font-size:10.5px;color:#71717a;word-break:break-all;line-height:1.45}
+.qd-line.qd-mine .qd-id{color:var(--or);font-weight:700}
+.qd-line.qd-mine>span:last-child{color:var(--or);font-weight:700}
+.qd-tag{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:9px;font-weight:700;letter-spacing:.4px;margin-left:7px;white-space:nowrap}
+.qd-tag.qd-ext{color:var(--re)}
+.qtag{display:inline-block;font-size:9.5px;font-weight:700;color:var(--or);border:1px solid var(--or);border-radius:3px;padding:0 4px;margin-left:7px;vertical-align:1px;letter-spacing:.3px}
+
+input.search{border:1px solid var(--bd);border-radius:6px;padding:7px 12px;font-size:13px;outline:none;width:220px}
+input.search:focus{border-color:var(--or)}
+
+.btn{border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-p{background:var(--or);color:#fff}.btn-p:hover:not(:disabled){opacity:.87}
+.btn-g{background:none;border:1px solid var(--bd);color:var(--gy)}.btn-g:hover{border-color:#aaa;color:var(--dk)}
+.btn-r{background:none;border:1px solid #fca5a5;color:var(--re)}.btn-r:hover{background:#fef2f2}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-full{width:100%}
+
+.msg{border-radius:6px;padding:10px 14px;font-size:12px;margin-top:10px;display:none}
+.msg.err{background:#fef2f2;border:1px solid #fecaca;color:var(--re)}
+.msg.ok{background:#f0fdf4;border:1px solid #bbf7d0;color:var(--gr)}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.show{display:flex}
+.modal{background:var(--wh);border-radius:10px;width:480px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--gy);line-height:1;padding:0 4px}
+.modal-close:hover{color:var(--dk)}
+.modal-body{padding:22px}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--bd);display:flex;gap:10px;justify-content:flex-end}
+
+/* ── Pending Setup card ── */
+.pending-card{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;margin-bottom:16px;overflow:hidden}
+.pending-head{padding:12px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #fde68a}
+.pending-head h2{font-size:13px;font-weight:700;color:#92400e;margin-right:auto}
+.pending-dot{width:8px;height:8px;background:#f59e0b;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pending-row{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid #fef3c7;font-size:13px}
+.pending-row:last-child{border-bottom:0}
+.pending-name{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pending-acct{font-family:monospace;font-size:12px;color:#92400e;background:#fef3c7;padding:2px 6px;border-radius:4px;white-space:nowrap}
+.pending-section{font-size:11px;color:#a1a1aa;white-space:nowrap}
+.pending-empty{padding:20px 18px;font-size:12px;color:#a1a1aa;text-align:center}
+.btn-copy-acct{background:none;border:none;padding:2px;cursor:pointer;color:#d1d5db;transition:color .15s;flex-shrink:0;display:inline-flex;align-items:center}
+.btn-copy-acct:hover{color:#6b7280}
+.btn-copy-acct.copied{color:#22c55e}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;background:#18181b;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;max-width:320px}
+.toast.show{opacity:1}
+
+/* ── Status badges ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.3px;white-space:nowrap}
+.badge-act{background:#dcfce7;color:#15803d}
+.badge-i10{background:#fef9c3;color:#854d0e}
+.badge-i30{background:#fee2e2;color:#991b1b}
+.badge-off{background:#f4f4f5;color:#71717a}
+td.num-r{text-align:right;font-weight:600;font-size:12px}
+
+/* ── Invoice Template Editor ── */
+.ir-editor{background:var(--wh);border-radius:10px;width:1240px;max-width:98vw;height:94vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+.ir-head{padding:12px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.ir-head h3{font-size:15px;font-weight:700;margin-right:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ir-body{flex:1;display:flex;min-height:0}
+.ir-form{width:330px;flex-shrink:0;border-right:1px solid var(--bd);overflow-y:auto;padding:18px 20px}
+.ir-form .form-row{margin-bottom:11px}
+.ir-form .form-row-2{display:flex;gap:10px}.ir-form .form-row-2>.form-row{flex:1}
+.ir-preview{flex:1;background:#ececee;overflow:auto;padding:18px}
+.ir-preview iframe{display:block;width:720px;max-width:100%;margin:0 auto;height:920px;background:#fff;border:none;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.ir-accent-row{display:flex;gap:8px;align-items:center}
+.ir-accent-row input[type=color]{width:42px;height:34px;padding:2px;border:1px solid var(--bd);border-radius:6px;background:var(--wh);cursor:pointer}
+.ir-accent-row input[type=text]{flex:1}
+.ir-tabs{display:flex;gap:4px;margin-bottom:14px;background:#f4f4f5;border-radius:8px;padding:3px}
+.ir-tab{flex:1;border:none;background:none;border-radius:6px;padding:6px 0;font-size:12px;font-weight:600;color:var(--gy);cursor:pointer;transition:all .12s}
+.ir-tab.on{background:var(--wh);color:var(--dk);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.ir-blk{border:1px solid var(--bd);border-radius:8px;margin-bottom:8px;background:var(--wh);transition:box-shadow .1s,border-color .1s}
+.ir-blk.sel{border-color:var(--or);box-shadow:0 0 0 2px rgba(255,102,0,.18)}
+.ir-blk.dragging{opacity:.4}
+.ir-blk.drop-above{box-shadow:0 -3px 0 var(--or)}
+.ir-blk.drop-below{box-shadow:0 3px 0 var(--or)}
+.ir-blk-head{display:flex;align-items:center;gap:7px;padding:8px 10px;cursor:grab}
+.ir-blk-head .grip{color:#d4d4d8;font-size:13px;letter-spacing:-2px;user-select:none}
+.ir-blk-head .nm{font-size:12px;font-weight:700;flex:1;user-select:none}
+.ir-blk-head .ibtn{background:none;border:none;cursor:pointer;color:var(--gy);padding:2px 4px;border-radius:4px;display:inline-flex;align-items:center}
+.ir-blk-head .ibtn:hover{color:var(--dk);background:#f4f4f5}
+.ir-blk-head .ibtn.off{color:#d4d4d8}
+.ir-blk-body{padding:2px 10px 10px}
+.ir-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.ir-chip{border:1px solid var(--bd);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--gy);cursor:pointer;background:var(--wh);user-select:none;transition:all .12s}
+.ir-chip.on{background:var(--or);border-color:var(--or);color:#fff}
+.ir-mini{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap}
+.ir-mini select,.ir-mini input[type=number]{border:1px solid var(--bd);border-radius:6px;padding:4px 6px;font-size:11px;background:var(--wh);outline:none}
+.ir-mini input[type=number]{width:64px}
+.ir-mini .tbtn{border:1px solid var(--bd);border-radius:6px;background:var(--wh);padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;color:var(--gy)}
+.ir-mini .tbtn.on{background:var(--dk);color:#fff;border-color:var(--dk)}
+.ir-blk textarea{width:100%;border:1px solid var(--bd);border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;resize:vertical;min-height:52px;outline:none;margin-top:6px}
+.ir-blk textarea:focus{border-color:var(--or)}
+.ir-add{display:flex;gap:6px;margin-top:10px}
+.ir-add button{flex:1;border:1px dashed var(--bd);background:none;border-radius:8px;padding:7px 0;font-size:12px;color:var(--gy);cursor:pointer;transition:all .12s}
+.ir-add button:hover{border-color:var(--or);color:var(--or)}
+.ir-hint{font-size:11px;color:#a1a1aa;margin-top:12px;line-height:1.7}
+.ir-head-accent{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--gy);cursor:pointer}
+.ir-head-accent input[type=color]{width:30px;height:26px;padding:1px;border:1px solid var(--bd);border-radius:6px;background:var(--wh);cursor:pointer}
+/* Element editor popover */
+.ir-pop{position:fixed;z-index:500;width:290px;background:var(--wh);border:1px solid var(--bd);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.22);display:none}
+.ir-pop.docked{position:static;width:auto;box-shadow:none;margin:6px 10px 10px;border-color:var(--or)}
+.ir-pop-head{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--bd)}
+.ir-pop-head .nm{font-size:11px;font-weight:700;flex:1;text-transform:uppercase;letter-spacing:.4px;color:var(--gy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ir-pop-head button{background:none;border:none;cursor:pointer;color:var(--gy);font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px}
+.ir-pop-head button:hover{color:var(--dk);background:#f4f4f5}
+.ir-pop-body{padding:10px 12px}
+.ir-pop-body textarea{width:100%;border:1px solid var(--bd);border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;resize:vertical;min-height:48px;outline:none;margin-bottom:8px}
+.ir-pop-body textarea:focus{border-color:var(--or)}
+.ir-pop-hint{font-size:10.5px;color:#a1a1aa;margin-bottom:8px}
+.ir-pop-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ir-pop-row .tbtn{border:1px solid var(--bd);border-radius:6px;background:var(--wh);padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer;color:var(--gy)}
+.ir-pop-row .tbtn.on{background:var(--or);color:#fff;border-color:var(--or)}
+.ir-pop-row .tbtn.off{background:var(--dk);color:#fff;border-color:var(--dk);text-decoration:line-through}
+.ir-pop-row select,.ir-pop-row input[type=number]{border:1px solid var(--bd);border-radius:6px;padding:4px 6px;font-size:11px;background:var(--wh);outline:none}
+.ir-pop-row input[type=number]{width:58px}
+.ir-pop-row input[type=color]{width:30px;height:27px;padding:1px;border:1px solid var(--bd);border-radius:6px;background:var(--wh);cursor:pointer}
+.ir-pop-var{margin-top:8px}
+.ir-pop-var select{width:100%;border:1px solid var(--bd);border-radius:6px;padding:4px 6px;font-size:11px;background:var(--wh);outline:none}
+
+/* ── Toggle switch ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.toggle-row>label:first-child{font-size:11px;font-weight:700;color:var(--gy);text-transform:uppercase;letter-spacing:.4px;margin:0}
+.toggle-switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:#d1d5db;border-radius:99px;cursor:pointer;transition:background .2s}
+.toggle-track:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle-switch input:checked+.toggle-track{background:var(--or)}
+.toggle-switch input:checked+.toggle-track:before{transform:translateX(18px)}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="brand">3FS TECHNOLOGY</div>
+  <nav>
+    <a href="/">Sales Report</a>
+    <a href="/admin" class="on">Admin</a>
+  </nav>
+</nav>
+
+<!-- ── Login ───────────────────────────────────────────────────────────────── -->
+<div id="loginWrap">
+  <div class="login-card">
+    <h2>Admin Login</h2>
+    <p>Enter password to manage merchant credentials</p>
+    <div class="form-row">
+      <label>Password</label>
+      <input type="password" id="pwInput" placeholder="••••••••"
+             onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-p btn-full" id="bLogin" onclick="doLogin()">Login</button>
+    <div class="msg err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ── Admin panel ─────────────────────────────────────────────────────────── -->
+<div id="adminWrap" style="display:none">
+<div class="page">
+
+  <div class="toolbar">
+    <h1>Merchant Management</h1>
+    <input class="search" type="text" id="searchInput" placeholder="Search…" oninput="renderTable()">
+    <div class="filter-pills">
+      <button class="pill on" data-filter="all"         onclick="setFilter('all')">All</button>
+      <button class="pill"    data-filter="active"      onclick="setFilter('active')">Active</button>
+      <button class="pill"    data-filter="inactive_10" onclick="setFilter('inactive_10')">Inactive 10d</button>
+      <button class="pill"    data-filter="inactive_30" onclick="setFilter('inactive_30')">Inactive 30d</button>
+      <button class="pill"    data-filter="deactivated" onclick="setFilter('deactivated')">Deactivated</button>
+    </div>
+    <button class="btn btn-p btn-sm" onclick="openAdd()">+ Add Merchant</button>
+    <span id="versionBadge" style="font-size:11px;color:#52525b;background:#27272a;padding:3px 8px;border-radius:4px"></span>
+    <button class="btn btn-g btn-sm" onclick="doLogout()">Log Out</button>
+  </div>
+
+  <!-- Workflow pending setup card -->
+  <div class="pending-card" id="pendingCard" style="display:none">
+    <div class="pending-head">
+      <span class="pending-dot"></span>
+      <h2>Pending Setup</h2>
+      <span id="pendingCount" style="font-size:11px;color:#92400e;background:#fde68a;padding:2px 8px;border-radius:99px;font-weight:700"></span>
+      <button class="btn btn-g btn-sm" style="margin-left:4px;font-size:11px" onclick="loadPending()">↻</button>
+    </div>
+    <div id="pendingBody"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Merchants</h2>
+      <span id="refreshLabel" style="font-size:11px;color:var(--gy);display:none">↻ Refreshing…</span>
+      <span id="countLabel" style="font-size:12px;color:var(--gy)"></span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th class="col-num">#</th>
+          <th class="col-name">Company Name</th>
+          <th class="col-user">Username</th>
+          <th class="col-status">Status</th>
+          <th class="col-sales">This Month (RM)</th>
+          <th class="col-act">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="mBody"></tbody>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<!-- ── Add / Edit Modal ───────────────────────────────────────────────────── -->
+<div class="overlay" id="editModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">Add Merchant</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <input type="hidden" id="pendingWfId">
+
+      <!-- Paste template (add mode only) -->
+      <div id="pasteSection">
+        <div class="form-row">
+          <label>Paste Pospal Credentials Template</label>
+          <textarea id="tplPaste" placeholder="Paste the ====appId appKey==== block here…" oninput="parseTemplate()"></textarea>
+          <div class="parse-hint">Auto-fills fields below when detected</div>
+          <div class="parsed-ok" id="parsedOk">✓ Credentials parsed successfully</div>
+        </div>
+        <div class="section-div"><span>Or fill in manually</span></div>
+      </div>
+
+      <div class="form-row">
+        <label>Company Name</label>
+        <input type="text" id="fName" placeholder="e.g. LAO CIN CHAO SDN BHD">
+      </div>
+      <div class="form-row">
+        <label>Username (account)</label>
+        <input type="text" id="fAccount" class="mono" placeholder="e.g. lcc11888">
+      </div>
+      <div class="form-row">
+        <label>Pospal App ID</label>
+        <input type="text" id="fAppId" class="mono" placeholder="32-character hex string">
+      </div>
+      <div class="form-row">
+        <label>Pospal App Key</label>
+        <input type="text" id="fAppKey" class="mono" placeholder="numeric key">
+      </div>
+      <div class="form-row" id="pwRow">
+        <label>Default Password</label>
+        <input type="text" id="fPw" value="123456" placeholder="123456">
+      </div>
+      <div class="form-row">
+        <label>Day Start Hour (0–23, MYT)</label>
+        <input type="number" id="fDayStart" value="6" min="0" max="23" style="width:80px">
+        <span style="font-size:11px;color:var(--gy);margin-left:8px">0 = midnight–midnight &nbsp;|&nbsp; 6 = 6am–5:59am (default)</span>
+      </div>
+      <div class="section-div" style="margin-top:18px"><span>Features</span></div>
+      <div class="toggle-row">
+        <label>Member Portal</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="fMemberPortal">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <label>Join as Member</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="fJoinMember">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <!-- Quota — edit mode only. Never auto-loads: fetching costs 1 API call,
+           so it waits for an explicit Refresh click. -->
+      <div id="quotaWrap" style="display:none">
+        <div class="section-div quota-head" style="margin-top:18px">
+          <span>API Quota</span>
+          <span class="quota-head-r">
+            <span class="quota-when" id="quotaWhen"></span>
+            <button type="button" class="btn-mini" id="bQuotaRefresh" onclick="loadQuotaLog()"
+                    title="Fetch live quota + 7-day log from Pospal (costs 1 API call)">↻ Refresh</button>
+          </span>
+        </div>
+        <div class="quota-idle" id="quotaIdle">
+          Not loaded. Click Refresh to fetch live quota and the last 7 days from Pospal
+          — costs 1 API call out of this merchant's 300/day.
+        </div>
+        <div id="quotaResult" style="display:none">
+          <div class="quota-now" id="quotaNow"></div>
+          <div class="quota-bar"><i id="quotaBar"></i></div>
+          <div class="quota-note" id="quotaNote"></div>
+          <table class="quota-log"><tbody id="quotaLog"></tbody></table>
+        </div>
+        <div class="msg err" id="quotaErr"></div>
+      </div>
+
+      <div class="msg err" id="modalErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-g" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-p" id="bSave" onclick="doSave()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Reset Password Modal ──────────────────────────────────────────────── -->
+<div class="overlay" id="pwModal" onclick="if(event.target===this)closePwModal()">
+  <div class="modal" style="width:380px">
+    <div class="modal-head">
+      <h3>Reset Password</h3>
+      <button class="modal-close" onclick="closePwModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--gy);margin-bottom:14px">Reset password for <strong id="pwMerchName"></strong></p>
+      <div class="form-row">
+        <label>New Password</label>
+        <input type="text" id="newPw" value="123456">
+      </div>
+      <div class="msg err" id="pwErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-g" onclick="closePwModal()">Cancel</button>
+      <button class="btn btn-p" id="bResetPw" onclick="doResetPw()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete Modal ──────────────────────────────────────────────────────── -->
+<div class="overlay" id="delModal" onclick="if(event.target===this)closeDelModal()">
+  <div class="modal" style="width:400px">
+    <div class="modal-head">
+      <h3>Delete Merchant</h3>
+      <button class="modal-close" onclick="closeDelModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p>Delete <strong id="delName"></strong>?</p>
+      <p style="color:var(--gy);font-size:12px;margin-top:8px">Their credentials will be removed. Cached report data stays on disk.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-g" onclick="closeDelModal()">Cancel</button>
+      <button class="btn btn-r" id="bDel" onclick="doDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Report (Invoice Template) Editor ─────────────────────────────── -->
+<div class="overlay" id="irModal">
+  <div class="ir-editor">
+    <div class="ir-head">
+      <h3>Invoice Template — <span id="irMerchName"></span></h3>
+      <label class="ir-head-accent" title="Accent color"><input type="color" id="irAccent" oninput="irAccentChange(this.value)"><span>Accent</span></label>
+      <button class="btn btn-g btn-sm" onclick="resetIrStyle()">Reset to Default</button>
+      <button class="btn btn-p btn-sm" id="bIrSave" onclick="saveIr()">Save</button>
+      <button class="modal-close" onclick="closeIr()">×</button>
+    </div>
+    <div class="ir-body">
+      <div class="ir-form">
+        <div class="section-div" style="border-top:none;margin-top:0;padding-top:0"><span>Layout</span></div>
+        <div id="irBlocks"></div>
+        <div class="ir-add">
+          <button onclick="irAdd('text')">＋ Text</button>
+          <button onclick="irAdd('divider')">＋ Divider</button>
+          <button onclick="irAdd('spacer')">＋ Spacer</button>
+        </div>
+        <div class="ir-hint">Drag blocks (here or directly on the preview) to reorder.<br>Click <strong>any text on the preview</strong> and <strong>type directly on it</strong> — changes apply live. Drag the <strong>corner handle</strong> to resize its box. The popover sets font and color.<br>Use the chips above to show / hide each value.<br>Text supports variables like <code>{invoice_no}</code>, <code>{total}</code>, <code>{member_name}</code>.</div>
+      </div>
+      <div class="ir-preview"><iframe id="irFrame" title="Invoice preview"></iframe></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Element editor popover (click any text on the invoice preview) ─────── -->
+<div class="ir-pop" id="irPop">
+  <div class="ir-pop-head">
+    <span class="nm" id="irPopName"></span>
+    <button onclick="irPopReset()" title="Remove customization for this element">Reset</button>
+    <button onclick="irPopClose()" style="font-size:15px;line-height:1">×</button>
+  </div>
+  <div class="ir-pop-body">
+    <div class="ir-pop-hint" id="irPopHint"></div>
+    <div class="ir-pop-row">
+      <input type="number" id="irPopSize" min="6" max="60" placeholder="auto" title="Font size (px)" oninput="irElSet('size', parseFloat(this.value) || null)">
+      <button class="tbtn" id="irPopB" title="Bold" onclick="irPopCycle('bold', this)">B</button>
+      <button class="tbtn" id="irPopI" title="Italic" style="font-style:italic" onclick="irPopCycle('italic', this)">I</button>
+      <input type="color" id="irPopColor" title="Text color" oninput="irElSet('color', this.value)">
+      <select id="irPopFam" title="Font family" onchange="irElSet('family', this.value || null)">
+        <option value="">Default font</option>
+        <option value="serif">Serif</option>
+        <option value="mono">Monospace</option>
+      </select>
+    </div>
+    <div class="ir-pop-var" id="irPopVarWrap">
+      <select onchange="irPopInsertVar(this)">
+        <option value="">＋ Insert variable…</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/invoice-template.js?v=9"></script>
+<script>
+// ── Stale session → out ─────────────────────────────────────────────────
+// Admin sessions live in the server's memory too, so a restart invalidates the
+// token while it stays in sessionStorage.  A 401 means the session is gone: drop
+// back to the password panel instead of leaving a dead console on screen.
+// /api/admin/login is exempt — a 401 there just means wrong password.
+(function () {
+  const raw = window.fetch.bind(window);
+  let gone = false;
+  window.fetch = async (...args) => {
+    const res = await raw(...args);
+    if (res.status === 401 && !gone && !String(args[0] || '').includes('/login')) {
+      gone = true;            // one logout even when several requests fail at once
+      doLogout();
+    }
+    return res;
+  };
+})();
+fetch('/api/version').then(r=>r.json()).then(d=>{const el=document.getElementById('versionBadge');if(el)el.textContent='v'+d.version;}).catch(()=>{});
+// ── State ──────────────────────────────────────────────────────────────────────
+let TOKEN         = sessionStorage.getItem('adminToken') || '';
+let merchants     = [];
+let statsMap      = {};   // mid → {status, month_sales, consecutive_empty_days}
+let _statsLoaded  = false;
+let _statusFilter = 'all'; // 'all' | 'active' | 'inactive_10' | 'inactive_30'
+let deleteId      = null;
+
+// ── Local cache (stale-while-revalidate) ───────────────────────────────────────
+const CACHE_KEY = 'adminCache_v3';
+
+function saveCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(
+      {merchants, statsMap, ts: Date.now()}
+    ));
+  } catch (e) { /* storage full — ignore */ }
+}
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return false;
+    const c = JSON.parse(raw);
+    // Discard if older than 24 h
+    if (Date.now() - (c.ts || 0) > 86400000) return false;
+    merchants = c.merchants || [];
+    statsMap  = c.statsMap  || {};
+    if (Object.keys(statsMap).length > 0) _statsLoaded = true;
+    return true;
+  } catch (e) { return false; }
+}
+
+function setRefreshing(on) {
+  const el = document.getElementById('refreshLabel');
+  if (el) el.style.display = on ? '' : 'none';
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const pw  = document.getElementById('pwInput').value;
+  const btn = document.getElementById('bLogin');
+  const err = document.getElementById('loginErr');
+  err.style.display = 'none';
+  if (!pw) { err.textContent = 'Please enter password.'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  try {
+    const r = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({password: pw})
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Wrong password');
+    TOKEN = d.token;
+    sessionStorage.setItem('adminToken', TOKEN);
+    showAdmin();
+  } catch (e) {
+    err.textContent = e.message; err.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Login';
+  }
+}
+
+function doLogout() {
+  TOKEN = ''; sessionStorage.removeItem('adminToken');
+  localStorage.removeItem(CACHE_KEY);
+  _statsLoaded = false;
+  if (_statsInterval) { clearInterval(_statsInterval); _statsInterval = null; }
+  document.getElementById('adminWrap').style.display = 'none';
+  document.getElementById('loginWrap').style.display = 'flex';
+  document.getElementById('pwInput').value = '';
+}
+
+function authHeaders() {
+  return {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN};
+}
+
+// ── Panel ──────────────────────────────────────────────────────────────────────
+let _statsInterval = null;
+
+function showAdmin() {
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('adminWrap').style.display = 'block';
+  if (loadCache()) renderTable();
+  loadData();
+  loadPending();
+  if (_statsInterval) clearInterval(_statsInterval);
+  _statsInterval = setInterval(loadStats, 600000);
+}
+
+async function loadData() {
+  setRefreshing(true);
+  try {
+    const mr = await fetch('/api/admin/merchants', {headers: authHeaders()});
+    if (mr.status === 401) { doLogout(); return; }
+    const md = await mr.json();
+    merchants = md.merchants || [];
+    renderTable();
+    await loadStats();
+    saveCache();
+  } catch (e) {
+    showToast('Error loading data: ' + e.message);
+  } finally {
+    setRefreshing(false);
+  }
+}
+
+async function loadStats() {
+  if (!TOKEN) return;
+  try {
+    const r = await fetch('/api/admin/merchant-stats', {headers: authHeaders()});
+    if (r.status === 401) return;
+    const d = await r.json();
+    if (!d.ok) return;
+    statsMap     = d.stats || {};
+    _statsLoaded = true;
+    renderTable();
+  } catch (e) { /* ignore */ }
+}
+
+function setFilter(f) {
+  _statusFilter = f;
+  document.querySelectorAll('.pill').forEach(p =>
+    p.classList.toggle('on', p.dataset.filter === f));
+  renderTable();
+}
+
+// ── Table ──────────────────────────────────────────────────────────────────────
+function getMerchantStatus(id) {
+  return statsMap[id] || {status: 'active', month_sales: 0, consecutive_empty_days: 0};
+}
+
+function statusBadge(s) {
+  if (s.status === 'deactivated')
+    return `<span class="badge badge-off" title="90+ days no sales — sync stopped">Deactivated</span>`;
+  if (s.status === 'inactive_30')
+    return `<span class="badge badge-i30" title="${s.consecutive_empty_days} consecutive days no sales">Inactive 30d</span>`;
+  if (s.status === 'inactive_10')
+    return `<span class="badge badge-i10" title="${s.consecutive_empty_days} consecutive days no sales">Inactive 10d</span>`;
+  return `<span class="badge badge-act">Active</span>`;
+}
+
+function fmtSales(v) {
+  if (!v && v !== 0) return '<span style="color:#a1a1aa">–</span>';
+  return v.toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function renderTable() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  let list = q
+    ? merchants.filter(m => m.name.toLowerCase().includes(q) || (m.account||'').toLowerCase().includes(q) || m.appId.toLowerCase().includes(q))
+    : [...merchants];
+
+  // Filter by status pill
+  if (_statusFilter !== 'all') {
+    list = list.filter(m => {
+      const s = statsMap[m.id];
+      if (!s) return _statusFilter === 'active';
+      return s.status === _statusFilter;
+    });
+  }
+
+  // Sort: active first (by month_sales desc), then inactive_10, then inactive_30 (each group by sales desc)
+  const rankStatus = {active: 0, inactive_10: 1, inactive_30: 2, deactivated: 3};
+  list.sort((a, b) => {
+    const sa = getMerchantStatus(a.id);
+    const sb = getMerchantStatus(b.id);
+    const ra = rankStatus[sa.status] ?? 0;
+    const rb = rankStatus[sb.status] ?? 0;
+    if (ra !== rb) return ra - rb;
+    return (sb.month_sales || 0) - (sa.month_sales || 0);
+  });
+
+  document.getElementById('countLabel').textContent =
+    merchants.length === 0 ? '' : `${list.length} of ${merchants.length} merchants`;
+
+  const tbody = document.getElementById('mBody');
+  const COLS  = 6;
+
+  if (merchants.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${COLS}" class="empty-td">No merchants yet. Click <strong>+ Add Merchant</strong> to get started.</td></tr>`;
+    return;
+  }
+  // If filtering by status but stats haven't loaded yet, show loading state
+  if (_statusFilter !== 'all' && !_statsLoaded) {
+    tbody.innerHTML = `<tr><td colspan="${COLS}" class="empty-td" style="color:#a1a1aa">Loading activity data…</td></tr>`;
+    return;
+  }
+  if (list.length === 0) {
+    const msg = q ? `No results for "<em>${esc(q)}</em>"` : `No merchants with status: <strong>${_statusFilter.replace('_', ' ')}</strong>`;
+    tbody.innerHTML = `<tr><td colspan="${COLS}" class="empty-td">${msg}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((m, i) => {
+    const s  = getMerchantStatus(m.id);
+    const hasStats = !!statsMap[m.id];
+    return `<tr>
+      <td style="color:#a1a1aa;font-size:12px;overflow:visible">${i + 1}</td>
+      <td><strong>${esc(m.name)}</strong>${m.hasAppKey === false ? ' <span style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;vertical-align:middle">NO KEY</span>' : ''}</td>
+      <td class="mono">${esc(m.account || '–')}</td>
+      <td>${hasStats ? statusBadge(s) : '<span style="color:#a1a1aa;font-size:11px">–</span>'}</td>
+      <td class="num-r">${hasStats ? fmtSales(s.month_sales) : '<span style="color:#a1a1aa">–</span>'}</td>
+      <td class="actions">
+        <button class="btn btn-g btn-sm" onclick="openEdit('${m.id}')">Edit</button>
+        <button class="btn btn-g btn-sm" style="margin-left:4px" onclick="openEditReport('${m.id}')">Edit Report</button>
+        <button class="btn btn-g btn-sm" style="margin-left:4px" onclick="openResetPw('${m.id}','${esc(m.name)}')">PW</button>
+        <button class="btn btn-r btn-sm" style="margin-left:4px" onclick="openDelete('${m.id}','${esc(m.name)}')">Del</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Add / Edit ─────────────────────────────────────────────────────────────────
+// ── Template parser ────────────────────────────────────────────────────────────
+function parseTemplate() {
+  const text = document.getElementById('tplPaste').value;
+  const get  = key => { const m = text.match(new RegExp(key + '\\s*:\\s*(.+)', 'i')); return m ? m[1].trim() : ''; };
+  const account = get('account');
+  const name    = get('company');
+  const appId   = get('appID');
+  const appKey  = get('appKey');
+  const ok = account || name || appId || appKey;
+  if (ok) {
+    if (account) document.getElementById('fAccount').value = account;
+    if (name)    document.getElementById('fName').value    = name;
+    if (appId)   document.getElementById('fAppId').value   = appId;
+    if (appKey)  document.getElementById('fAppKey').value  = appKey;
+    document.getElementById('parsedOk').style.display = '';
+  } else {
+    document.getElementById('parsedOk').style.display = 'none';
+  }
+}
+
+function openAdd() {
+  document.getElementById('editId').value      = '';
+  document.getElementById('pendingWfId').value = '';
+  document.getElementById('tplPaste').value  = '';
+  document.getElementById('fName').value     = '';
+  document.getElementById('fAccount').value  = '';
+  document.getElementById('fAppId').value    = '';
+  document.getElementById('fAppKey').value   = '';
+  document.getElementById('fAppKey').placeholder = 'numeric key';
+  document.getElementById('fPw').value       = '123456';
+  document.getElementById('fDayStart').value = '6';
+  document.getElementById('parsedOk').style.display = 'none';
+  document.getElementById('pasteSection').style.display = '';
+  document.getElementById('pwRow').style.display = '';
+  document.getElementById('modalTitle').textContent = 'Add Merchant';
+  document.getElementById('modalErr').style.display = 'none';
+  document.getElementById('quotaWrap').style.display = 'none';
+  openModal();
+  setTimeout(() => document.getElementById('tplPaste').focus(), 80);
+}
+
+function openEdit(id) {
+  const m = merchants.find(m => m.id === id);
+  if (!m) return;
+  document.getElementById('editId').value    = id;
+  document.getElementById('fName').value     = m.name;
+  document.getElementById('fAccount').value  = m.account || '';
+  document.getElementById('fDayStart').value = m.dayStartHour !== undefined ? m.dayStartHour : 6;
+  document.getElementById('fAppId').value   = m.appId;
+  document.getElementById('fAppKey').value  = '';
+  document.getElementById('fAppKey').placeholder = m.hasAppKey ? 'Leave blank to keep existing key' : '⚠ No App Key set — enter it now';
+  document.getElementById('fAppKey').style.borderColor = m.hasAppKey ? '' : '#dc2626';
+  document.getElementById('pasteSection').style.display = 'none';
+  document.getElementById('pwRow').style.display = 'none';
+  document.getElementById('modalTitle').textContent = 'Edit Merchant';
+  const errEl = document.getElementById('modalErr');
+  if (!m.hasAppKey) {
+    errEl.textContent = '⚠ This merchant has no App Key — API sync and pay methods will not work until you enter it.';
+    errEl.style.display = 'block';
+    errEl.style.background = '#fffbeb'; errEl.style.borderColor = '#fcd34d'; errEl.style.color = '#92400e';
+  } else {
+    errEl.style.display = 'none';
+  }
+  document.getElementById('fMemberPortal').checked = !!m.member_portal;
+  document.getElementById('fJoinMember').checked    = !!m.join_member;
+  document.getElementById('quotaWrap').style.display = m.hasAppKey ? 'block' : 'none';
+  resetQuotaSection(id);
+  openModal();
+  setTimeout(() => document.getElementById('fName').focus(), 80);
+}
+
+// ── Quota section (Edit Merchant modal) ───────────────────────────────────────
+// Fetching costs 1 Pospal API call, so it never fires on modal open. The last
+// result per merchant is kept in localStorage: reopening the same merchant shows
+// what you already paid for, stamped with when it was fetched. Only the Refresh
+// button spends another call.
+const QUOTA_CACHE_KEY = 'adm_quota_logs_v1';
+let quotaLogs = {};
+try { quotaLogs = JSON.parse(localStorage.getItem(QUOTA_CACHE_KEY) || '{}'); } catch (e) { quotaLogs = {}; }
+
+function saveQuotaLogs() {
+  try { localStorage.setItem(QUOTA_CACHE_KEY, JSON.stringify(quotaLogs)); } catch (e) { /* storage full */ }
+}
+
+const Q_DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const Q_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function fmtQuotaDay(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return {dow: '', label: iso || '—'};
+  return {dow: Q_DOW[d.getDay()], label: `${Q_MON[d.getMonth()]} ${d.getDate()}`};
+}
+
+function quotaAgo(ts) {
+  const s = Math.max(0, Math.floor(Date.now() / 1000 - ts));
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} hr ago`;
+  return `${Math.floor(h / 24)} d ago`;
+}
+
+function quotaClock(ts) {
+  const d = new Date(ts * 1000);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// Per-day breakdown: ours vs each of the merchant's other appIds. The data
+// already came back in the same response, so opening this costs nothing.
+// appIds are shown in full — 32 hex chars fit the 480px modal with room to
+// spare, and a truncated id is useless for identifying which app it is.
+function quotaDetailRow(r, i, ourAppId) {
+  const others = (r.others || []).slice().sort((a, b) => b.used - a.used);
+  const lines  = [`<div class="qd-line qd-mine">`
+                + `<span class="qd-id">${esc(ourAppId || '—')}<span class="qd-tag">POSPAL REPORT</span></span>`
+                + `<span>${r.used}</span></div>`];
+  // Sibling outlets of the same chain are filtered out server-side — they are
+  // this project syncing other stores, not usage of THIS merchant. Only genuine
+  // third-party applications reach here.
+  others.forEach(o => {
+    lines.push(`<div class="qd-line"><span class="qd-id">${esc(o.appId)}`
+             + `<span class="qd-tag qd-ext">EXTERNAL</span></span>`
+             + `<span>${o.used}</span></div>`);
+  });
+  lines.push(`<div class="qd-line qd-total">`
+           + `<span>This merchant + ${others.length} external</span>`
+           + `<span>${r.used + (r.otherUsed || 0)} / ${r.limit}</span></div>`);
+  return `<tr class="qdetail" id="qd-${i}" style="display:none">`
+       + `<td colspan="4"><div class="qd-box">${lines.join('')}</div></td></tr>`;
+}
+
+function toggleQuotaDay(i) {
+  const row  = document.getElementById('qd-' + i);
+  const chev = document.getElementById('qchev-' + i);
+  if (!row) return;
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'table-row';
+  if (chev) chev.textContent = isOpen ? '▶' : '▼';
+}
+
+function resetQuotaSection(mid) {
+  const cached = mid ? quotaLogs[mid] : null;
+  if (cached) { renderQuotaLog(cached); return; }
+  document.getElementById('quotaIdle').style.display   = 'block';
+  document.getElementById('quotaResult').style.display = 'none';
+  document.getElementById('quotaErr').style.display    = 'none';
+  document.getElementById('quotaWhen').textContent     = '';
+}
+
+function renderQuotaLog(p) {
+  const t = p.today, left = Math.max(0, t.limit - t.used);
+  const pct = t.limit ? Math.min(100, (t.used / t.limit) * 100) : 0;
+
+  const nowEl = document.getElementById('quotaNow');
+  nowEl.innerHTML   = `${t.used}<span style="color:#a1a1aa"> / ${t.limit}</span>`
+                    + `<small>${left} left today</small>`;
+  nowEl.style.color = left < 50 ? '#dc2626' : left < 100 ? '#92400e' : 'var(--dk)';
+  const bar = document.getElementById('quotaBar');
+  bar.style.width      = pct.toFixed(1) + '%';
+  bar.style.background = left < 50 ? '#dc2626' : left < 100 ? '#d97706' : '#16a34a';
+
+  // Each day's bar is scaled against the busiest day and split in two: our own
+  // usage (orange on today, grey otherwise) and everything the merchant's other
+  // appIds spent. Days with other apps are clickable for the per-appId figures.
+  const rows = p.rows || [];
+  const dayTotal = r => r.used + (r.otherUsed || 0);
+  const peak = Math.max(1, ...rows.map(dayTotal));
+  document.getElementById('quotaLog').innerHTML = rows.slice().reverse().map((r, i) => {
+    const d       = fmtQuotaDay(r.date);
+    const isToday = r.date === t.date;
+    const total   = dayTotal(r);
+    const hasMore = (r.others || []).length > 0;
+    const wMine   = r.used > 0 ? Math.max(3, Math.round(r.used / peak * 100)) : 0;
+    const wOther  = (r.otherUsed || 0) > 0 ? Math.max(3, Math.round(r.otherUsed / peak * 100)) : 0;
+    const row = `<tr class="${isToday ? 'today' : ''}${hasMore ? ' qclick' : ''}"`
+              + `${hasMore ? ` onclick="toggleQuotaDay(${i})"` : ''}>`
+              + `<td class="qdow">${d.dow}</td>`
+              + `<td>${d.label}${isToday ? '<span class="qtag">TODAY</span>' : ''}`
+              + `${hasMore ? `<span class="qchev" id="qchev-${i}">▶</span>` : ''}</td>`
+              + `<td class="qbar"><span><i style="width:${wMine}%"></i><b style="width:${wOther}%"></b></span></td>`
+              + `<td class="quse">${r.used}${hasMore ? `<em> of ${total}</em>` : ''}</td></tr>`;
+    return row + (hasMore ? quotaDetailRow(r, i, p.appId) : '');
+  }).join('');
+
+  const ourTotal = rows.reduce((s, r) => s + r.used, 0);
+  const extTotal = rows.reduce((s, r) => s + (r.otherUsed || 0), 0);
+  const extIds   = new Set();
+  rows.forEach(r => (r.others || []).forEach(o => extIds.add(o.appId)));
+
+  const notes = [`${rows.length}-day total <b>${ourTotal}</b>`, `busiest ${peak}`];
+  if (extTotal) notes.push(`${extTotal} from ${extIds.size} external app${extIds.size > 1 ? 's' : ''} — click a day`);
+  // Say that siblings were dropped, otherwise these numbers look wrong against
+  // Pospal's own console, which shows the whole chain.
+  if (p.chainOutlets) notes.push(`${p.chainOutlets} sibling outlet${p.chainOutlets > 1 ? 's' : ''} in this chain excluded`);
+  document.getElementById('quotaNote').innerHTML = notes.join(' &nbsp;·&nbsp; ');
+
+  document.getElementById('quotaWhen').textContent =
+    p.fetchedAt ? `fetched ${quotaClock(p.fetchedAt)} · ${quotaAgo(p.fetchedAt)}` : '';
+  document.getElementById('quotaIdle').style.display   = 'none';
+  document.getElementById('quotaResult').style.display = 'block';
+  document.getElementById('quotaErr').style.display    = 'none';
+}
+
+async function loadQuotaLog() {
+  const id  = document.getElementById('editId').value;
+  const btn = document.getElementById('bQuotaRefresh');
+  const err = document.getElementById('quotaErr');
+  if (!id) return;
+  btn.disabled = true; btn.textContent = '↻ Loading…';
+  err.style.display = 'none';
+  try {
+    const r = await fetch(`/api/admin/quota-log/${id}`, {headers: authHeaders()});
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Failed');
+    const payload = {rows        : d.rows || [],
+                     today       : d.today,
+                     appId       : d.appId || '',
+                     externalRows: d.externalRows || 0,
+                     chainOutlets: d.chainOutlets || 0,
+                     chainUsed   : d.chainUsed || 0,
+                     fetchedAt   : d.fetchedAt || Math.floor(Date.now() / 1000)};
+    quotaLogs[id] = payload;
+    saveQuotaLogs();
+    renderQuotaLog(payload);
+  } catch (e) {
+    err.textContent   = 'Quota check failed: ' + e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = '↻ Refresh';
+  }
+}
+
+function openModal() {
+  const overlay = document.getElementById('editModal');
+  overlay.classList.add('show');
+  const modal = overlay.querySelector('.modal');
+  if (modal) modal.scrollTop = 0;
+}
+
+function closeModal() { document.getElementById('editModal').classList.remove('show'); }
+
+async function doSave() {
+  const id         = document.getElementById('editId').value;
+  const pendingWfId= document.getElementById('pendingWfId').value;
+  const name       = document.getElementById('fName').value.trim();
+  const account    = document.getElementById('fAccount').value.trim();
+  const appId      = document.getElementById('fAppId').value.trim();
+  const appKey      = document.getElementById('fAppKey').value.trim();
+  const pw          = document.getElementById('fPw').value.trim() || '123456';
+  const dayStartHour= parseInt(document.getElementById('fDayStart').value, 10) || 0;
+  const errEl   = document.getElementById('modalErr');
+  errEl.style.display = 'none';
+
+  const isEdit = !!id;
+  if (!name || !account || !appId || (!isEdit && !appKey)) {
+    errEl.textContent = isEdit
+      ? 'Company Name, Username and App ID are required. Leave App Key blank to keep existing.'
+      : 'Company Name, Username, App ID and App Key are all required.';
+    errEl.style.display = 'block'; return;
+  }
+
+  document.getElementById('bSave').disabled = true;
+  try {
+    const memberPortal = document.getElementById('fMemberPortal').checked;
+    const joinMember   = document.getElementById('fJoinMember').checked;
+    const body = id ? {name, account, appId, appKey, dayStartHour, member_portal: memberPortal, join_member: joinMember} : {name, account, appId, appKey, password: pw, dayStartHour};
+    const r = await fetch(id ? `/api/merchants/${id}` : '/api/merchants', {
+      method : id ? 'PUT' : 'POST',
+      headers: authHeaders(),
+      body   : JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Save failed');
+    closeModal();
+    showToast(id ? 'Merchant updated.' : `Merchant added. Login: ${account} / ${pw}`);
+    if (!isEdit && pendingWfId) {
+      await fetch('/api/admin/pending-dismiss', {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({wf_id: pendingWfId, account})
+      });
+    }
+    await loadData();
+    await loadPending();
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  } finally {
+    document.getElementById('bSave').disabled = false;
+  }
+}
+
+// ── Reset Password ─────────────────────────────────────────────────────────────
+let resetPwId = null;
+
+function openResetPw(id, name) {
+  resetPwId = id;
+  document.getElementById('pwMerchName').textContent = name;
+  document.getElementById('newPw').value = '123456';
+  document.getElementById('pwErr').style.display = 'none';
+  document.getElementById('pwModal').classList.add('show');
+  setTimeout(() => document.getElementById('newPw').select(), 80);
+}
+
+function closePwModal() { document.getElementById('pwModal').classList.remove('show'); resetPwId = null; }
+
+async function doResetPw() {
+  if (!resetPwId) return;
+  const pw  = document.getElementById('newPw').value.trim() || '123456';
+  const err = document.getElementById('pwErr');
+  err.style.display = 'none';
+  document.getElementById('bResetPw').disabled = true;
+  try {
+    const r = await fetch(`/api/merchants/${resetPwId}/reset-password`, {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify({password: pw})
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error('Reset failed');
+    closePwModal();
+    showToast(`Password reset to "${pw}"`);
+  } catch (e) {
+    err.textContent = e.message; err.style.display = 'block';
+  } finally {
+    document.getElementById('bResetPw').disabled = false;
+  }
+}
+
+// ── Delete ─────────────────────────────────────────────────────────────────────
+function openDelete(id, name) {
+  deleteId = id;
+  document.getElementById('delName').textContent = name;
+  document.getElementById('delModal').classList.add('show');
+}
+
+function closeDelModal() { document.getElementById('delModal').classList.remove('show'); deleteId = null; }
+
+async function doDelete() {
+  if (!deleteId) return;
+  document.getElementById('bDel').disabled = true;
+  try {
+    const r = await fetch(`/api/merchants/${deleteId}`, {
+      method : 'DELETE',
+      headers: authHeaders()
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error('Delete failed');
+    closeDelModal();
+    showToast('Merchant deleted.');
+    await loadData();
+  } catch (e) {
+    showToast(e.message);
+  } finally {
+    document.getElementById('bDel').disabled = false;
+  }
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+if (TOKEN) {
+  // Verify stored session is still valid
+  fetch('/api/admin/merchants', {headers: authHeaders()})
+    .then(r => { if (r.ok) { showAdmin(); } else { doLogout(); } })
+    .catch(() => { /* server not ready, show login */ });
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeDelModal(); closePwModal(); }
+});
+document.getElementById('editModal').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSave();
+});
+
+// Stats auto-refreshes every 10 min when admin panel is open (see showAdmin)
+
+// ── Workflow Pending Setup ─────────────────────────────────────────────────────
+async function loadPending() {
+  try {
+    const r = await fetch('/api/admin/pending-setup', {headers: authHeaders()});
+    if (r.status === 401) return;
+    const d = await r.json();
+    if (!d.ok) return;
+    const card  = document.getElementById('pendingCard');
+    const body  = document.getElementById('pendingBody');
+    const count = document.getElementById('pendingCount');
+    const existingAccounts = new Set(merchants.map(m => (m.account||'').toLowerCase()));
+    const list  = (d.pending || []).filter(p => !existingAccounts.has((p.account||'').toLowerCase()));
+
+    if (!d.db_found) {
+      card.style.display = 'none'; return;
+    }
+    if (list.length === 0) {
+      card.style.display = 'none'; return;
+    }
+    card.style.display = '';
+    count.textContent  = list.length + ' pending';
+    body.innerHTML = list.map(p => `
+      <div class="pending-row" id="pr-${esc(p.wf_id)}">
+        <span class="pending-name" title="${esc(p.name)}">${esc(p.name)}</span>
+        <span class="pending-acct">${esc(p.account)}</span>
+        <button class="btn-copy-acct" data-acct="${esc(p.account)}" title="Copy account name" onclick="copyAcct(this)"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
+        <span class="pending-section">${esc(p.section)}</span>
+        <button class="btn btn-p btn-sm"
+          data-name="${esc(p.name)}" data-account="${esc(p.account)}" data-wfid="${esc(p.wf_id)}"
+          onclick="openSetupPending(this.dataset.name, this.dataset.account, this.dataset.wfid)">Setup</button>
+        <button class="btn btn-g btn-sm" style="color:#dc2626;border-color:#fca5a5"
+          data-id="${esc(p.wf_id)}" data-account="${esc(p.account)}"
+          onclick="dismissPending(this.dataset.id, this.dataset.account, this)" title="Dismiss">✕</button>
+      </div>`).join('');
+  } catch (e) { /* ignore */ }
+}
+
+function copyAcct(btn) {
+  const acct = btn.dataset.acct;
+  navigator.clipboard.writeText(acct).then(() => {
+    const origHTML = btn.innerHTML;
+    btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.innerHTML = origHTML; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function openSetupPending(name, account, wf_id) {
+  document.getElementById('editId').value      = '';
+  document.getElementById('pendingWfId').value = wf_id || '';
+  document.getElementById('tplPaste').value    = '';
+  document.getElementById('fName').value       = name;
+  document.getElementById('fAccount').value    = account;
+  document.getElementById('fAppId').value      = '';
+  document.getElementById('fAppKey').value     = '';
+  document.getElementById('fAppKey').placeholder = 'numeric key';
+  document.getElementById('fPw').value         = '123456';
+  document.getElementById('fDayStart').value   = '6';
+  document.getElementById('parsedOk').style.display  = 'none';
+  document.getElementById('pasteSection').style.display = '';
+  document.getElementById('pwRow').style.display      = '';
+  document.getElementById('modalTitle').textContent   = 'Setup Merchant';
+  document.getElementById('modalErr').style.display   = 'none';
+  openModal();
+  setTimeout(() => document.getElementById('fAppId').focus(), 80);
+}
+
+async function dismissPending(wf_id, account, btn) {
+  const row  = document.getElementById('pr-' + wf_id);
+  const name = row ? row.querySelector('.pending-name').textContent : '';
+  if (!confirm(`Dismiss "${name}"?\n\nThis will hide it from Pending Setup permanently.`)) return;
+  btn.disabled = true;
+  try {
+    await fetch('/api/admin/pending-dismiss', {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify({wf_id})  // account NOT passed — only block this specific wf_id
+    });
+    if (row) row.remove();
+    const remaining = document.querySelectorAll('[id^="pr-"]').length;
+    if (remaining === 0) document.getElementById('pendingCard').style.display = 'none';
+    else document.getElementById('pendingCount').textContent = remaining + ' pending';
+  } catch (e) { btn.disabled = false; }
+}
+
+// ── Edit Report (Invoice Template) Editor ──────────────────────────────────────
+let irMid = null, irBlocks = [], irSelId = null, irDragFrom = null;
+let irSettings = {};   // full settings object loaded from server (info fields etc.)
+let irEl = {};         // per-element overrides: {key: {text, size, bold, italic, color, family}}
+let irAccent = '';     // accent color override ('' = default)
+
+// Sample transaction shown in the live preview (mirrors a real invoice layout)
+const IR_SAMPLE_TICKET = {
+  sn: '20260715124733817001',
+  datetime: '2026-07-15 12:48:00',
+  totalAmount: 1916.00, taxFee: 0, serviceFee: 0, rounding: 0,
+  cashier: {name: '1001'},
+  ticketOnTable: {tableCardNo: '0001'},
+  // remarks are sampled too, so the preview shows what the new toggles do
+  remark: 'Deposit paid in advance',
+  items: [
+    {name: 'GLENMORANGIE LASANTA 70CL', quantity: 2,  sellPrice: 399.00, totalAmount: 716.00,
+     remark: 'gift wrap'},
+    {name: 'BOHAE BOKBUNJA',            quantity: 12, sellPrice: 109.00, totalAmount: 1200.00},
+  ],
+  payments: [{code: 'BANK', amount: 1916.00}],
+};
+const IR_SAMPLE_MEMBER = {name: 'EVERLYN GOH', phone: '3123228683', point: 0, balance: 0};
+
+function normHex(c) {
+  c = (c || '').trim();
+  const m3 = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(c);
+  if (m3) return ('#' + m3[1] + m3[1] + m3[2] + m3[2] + m3[3] + m3[3]).toLowerCase();
+  if (/^#[0-9a-f]{6}$/i.test(c)) return c.toLowerCase();
+  return '#ff6600';
+}
+function irAccentChange(v) { irAccent = v; updateIrPreview(); }
+
+async function openEditReport(mid) {
+  irMid = mid; irSelId = null;
+  const m = merchants.find(x => x.id === mid);
+  document.getElementById('irMerchName').textContent = m ? m.name : mid;
+  let s = {};
+  try {
+    const r = await fetch('/api/admin/invoice-settings?mid=' + encodeURIComponent(mid), {headers: authHeaders()});
+    if (r.status === 401) { doLogout(); return; }
+    const d = await r.json();
+    if (d.ok) s = d.settings || {};
+  } catch (e) { showToast('Failed to load settings: ' + e.message); }
+  irSettings = s;
+  irEl = JSON.parse(JSON.stringify(s.el || {}));
+  irAccent = s.accent || '';
+  document.getElementById('irAccent').value = normHex(irAccent);
+  irBlocks = JSON.parse(JSON.stringify(InvoiceTemplate.normalizeBlocks(s)));
+  renderIrBlocks();
+  irPopClose();
+  document.getElementById('irModal').classList.add('show');
+  updateIrPreview();
+}
+function closeIr() { irPopClose(); document.getElementById('irModal').classList.remove('show'); irMid = null; }
+
+function collectIr() {
+  return Object.assign({}, irSettings, {accent: irAccent, blocks: irBlocks, el: irEl});
+}
+
+function updateIrPreview() {
+  if (!irMid) return;
+  const m = merchants.find(x => x.id === irMid);
+  const html = InvoiceTemplate.build(IR_SAMPLE_TICKET, collectIr(),
+    {member: IR_SAMPLE_MEMBER, PM: {}, fallbackName: m ? m.name : '', edit: true});
+  document.getElementById('irFrame').srcdoc = html;
+}
+
+// ── Block panel ────────────────────────────────────────────────────────────────
+const IR_EYE   = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const IR_TRASH = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>';
+const IR_CUSTOM_TYPES = ['text', 'divider', 'spacer'];
+
+function irBlk(id) { return irBlocks.find(b => b.id === id); }
+
+function irChipHtml(id, key, label, onDefault) {
+  const b = irBlk(id);
+  const isOn = b.opts[key] !== undefined ? b.opts[key] !== false : onDefault;
+  return `<span class="ir-chip ${isOn ? 'on' : ''}" onclick="irChip('${id}','${key}',this)">${label}</span>`;
+}
+
+// Element-level visibility chips (stored as irEl[key].show === false when off)
+function irElChips(type) {
+  const els = InvoiceTemplate.BLOCK_ELEMENTS[type] || [];
+  return els.map(([k, l]) => {
+    const on = !irEl[k] || irEl[k].show !== false;
+    return `<span class="ir-chip ${on ? 'on' : ''}" onclick="irElChip('${k}',this)">${l}</span>`;
+  }).join('');
+}
+function irElChip(key, el) {
+  const o = irEl[key] || (irEl[key] = {});
+  const on = o.show !== false;
+  if (on) o.show = false; else delete o.show;
+  if (Object.keys(o).length === 0) delete irEl[key];
+  el.classList.toggle('on', !on);
+  updateIrPreview();
+}
+
+function irCardBody(b) {
+  const o = b.opts;
+  switch (b.type) {
+    case 'header':
+      return `<div class="ir-mini"><select onchange="irOpt('${b.id}','layout',this.value)">
+        <option value="split"${o.layout !== 'center' ? ' selected' : ''}>Split — company left, title right</option>
+        <option value="center"${o.layout === 'center' ? ' selected' : ''}>Centered — classic receipt look</option>
+      </select></div>
+      <div class="ir-chips">${irElChips('header')}</div>`;
+    case 'meta':
+      return `<div class="ir-mini"><select onchange="irOpt('${b.id}','style',this.value)">
+        <option value="grid"${o.style !== 'lines' ? ' selected' : ''}>Grid cards</option>
+        <option value="lines"${o.style === 'lines' ? ' selected' : ''}>Plain lines</option>
+      </select></div>
+      <div class="ir-chips">
+        ${irChipHtml(b.id, 'invoice_no', 'Invoice No', false)}
+        ${irChipHtml(b.id, 'date', 'Date', false)}
+        ${irChipHtml(b.id, 'cashier', 'Cashier', true)}
+        ${irChipHtml(b.id, 'table', 'Table', true)}
+        ${irChipHtml(b.id, 'member', 'Member', true)}
+        ${irChipHtml(b.id, 'points', 'Points', true)}
+      </div>`;
+    case 'items':
+      return `<div class="ir-chips">${irElChips('items')}${irChipHtml(b.id, 'discount', 'Discount', true)}</div>`;
+    case 'totals':
+      return `<div class="ir-chips">${irChipHtml(b.id, 'subtotal', 'Subtotal', true)}${irElChips('totals')}</div>`;
+    case 'payment':
+      return `<div class="ir-chips">${irElChips('payment')}</div>`;
+    case 'footer':
+      return `<div class="ir-chips">${irElChips('footer')}</div>`;
+    case 'text':
+      return `<textarea placeholder="Your text… use {variables}" oninput="irOpt('${b.id}','text',this.value)">${esc(o.text || '')}</textarea>
+      <div class="ir-mini">
+        <select onchange="irOpt('${b.id}','align',this.value)">
+          <option value="left"${(o.align || 'left') === 'left' ? ' selected' : ''}>Left</option>
+          <option value="center"${o.align === 'center' ? ' selected' : ''}>Center</option>
+          <option value="right"${o.align === 'right' ? ' selected' : ''}>Right</option>
+        </select>
+        <select onchange="irOpt('${b.id}','size',this.value)">
+          <option value="sm"${o.size === 'sm' ? ' selected' : ''}>Small</option>
+          <option value="md"${(o.size || 'md') === 'md' ? ' selected' : ''}>Normal</option>
+          <option value="lg"${o.size === 'lg' ? ' selected' : ''}>Large</option>
+        </select>
+        <button class="tbtn ${o.bold ? 'on' : ''}" onclick="irToggle('${b.id}','bold',this)">B</button>
+        <button class="tbtn ${o.italic ? 'on' : ''}" style="font-style:italic" onclick="irToggle('${b.id}','italic',this)">I</button>
+        <button class="tbtn ${o.muted ? 'on' : ''}" onclick="irToggle('${b.id}','muted',this)">Gray</button>
+      </div>
+      <div class="ir-mini"><select onchange="irInsertVar('${b.id}',this)" style="width:100%">
+        <option value="">＋ Insert variable…</option>
+        ${InvoiceTemplate.PLACEHOLDERS.map(p => `<option value="{${p}}">{${p}}</option>`).join('')}
+      </select></div>`;
+    case 'divider':
+      return `<div class="ir-mini"><select onchange="irOpt('${b.id}','style',this.value)">
+        <option value="solid"${o.style !== 'dashed' ? ' selected' : ''}>Solid line</option>
+        <option value="dashed"${o.style === 'dashed' ? ' selected' : ''}>Dashed line</option>
+      </select></div>`;
+    case 'spacer':
+      return `<div class="ir-mini"><label style="font-size:11px;color:var(--gy)">Height</label>
+        <input type="number" min="2" max="120" value="${parseInt(o.height) || 16}" onchange="irOpt('${b.id}','height',parseInt(this.value)||16)"> px</div>`;
+    default:
+      return '';
+  }
+}
+
+function renderIrBlocks() {
+  const wrap = document.getElementById('irBlocks');
+  // The popover may be docked inside a card — rescue it before innerHTML wipes it
+  const pop = document.getElementById('irPop');
+  const wasDocked = pop && pop.classList.contains('docked') && wrap.contains(pop);
+  if (wasDocked) document.body.appendChild(pop);
+  wrap.innerHTML = irBlocks.map((b, i) => `
+    <div class="ir-blk ${b.id === irSelId ? 'sel' : ''} ${b.show ? '' : 'hidden-blk'}" data-bi="${i}" data-id="${b.id}">
+      <div class="ir-blk-head" draggable="true">
+        <span class="grip">⠿⠿</span>
+        <span class="nm" style="${b.show ? '' : 'color:#a1a1aa;text-decoration:line-through'}">${InvoiceTemplate.BLOCK_NAMES[b.type] || b.type}</span>
+        <button class="ibtn ${b.show ? '' : 'off'}" title="${b.show ? 'Hide' : 'Show'}" onclick="irEye('${b.id}')">${IR_EYE}</button>
+        ${IR_CUSTOM_TYPES.includes(b.type) ? `<button class="ibtn" title="Delete" onclick="irDel('${b.id}')">${IR_TRASH}</button>` : ''}
+      </div>
+      <div class="ir-blk-body">${irCardBody(b)}</div>
+    </div>`).join('');
+  bindIrDrag();
+  if (wasDocked && irPopMsg) {
+    const bid = irKeyBlockId(irPopMsg.key);
+    const card = bid && wrap.querySelector(`.ir-blk[data-id="${bid}"]`);
+    if (card) { card.appendChild(pop); } else { irPopClose(); }
+  }
+}
+
+function bindIrDrag() {
+  const clearMarks = () => document.querySelectorAll('#irBlocks .ir-blk').forEach(x => x.classList.remove('drop-above', 'drop-below'));
+  document.querySelectorAll('#irBlocks .ir-blk').forEach(card => {
+    const head = card.querySelector('.ir-blk-head');
+    head.addEventListener('dragstart', e => { irDragFrom = +card.dataset.bi; card.classList.add('dragging'); });
+    head.addEventListener('dragend', () => { card.classList.remove('dragging'); clearMarks(); });
+    card.addEventListener('dragover', e => {
+      e.preventDefault(); clearMarks();
+      const r = card.getBoundingClientRect();
+      card.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-above' : 'drop-below');
+    });
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      const r = card.getBoundingClientRect();
+      const to = +card.dataset.bi + (e.clientY < r.top + r.height / 2 ? 0 : 1);
+      clearMarks();
+      irMove(irDragFrom, to); irDragFrom = null;
+    });
+  });
+}
+
+function irMove(from, to) {
+  if (from == null || to == null || isNaN(from) || isNaN(to)) return;
+  if (from === to || from + 1 === to) { renderIrBlocks(); return; }
+  const [b] = irBlocks.splice(from, 1);
+  irBlocks.splice(to > from ? to - 1 : to, 0, b);
+  renderIrBlocks(); updateIrPreview();
+}
+
+function irOpt(id, key, val)  { const b = irBlk(id); if (!b) return; b.opts[key] = val; updateIrPreview(); }
+function irToggle(id, key, el){ const b = irBlk(id); if (!b) return; b.opts[key] = !b.opts[key]; el.classList.toggle('on', !!b.opts[key]); updateIrPreview(); }
+function irChip(id, key, el)  {
+  const b = irBlk(id); if (!b) return;
+  const cur = b.opts[key] !== undefined ? b.opts[key] !== false : el.classList.contains('on');
+  b.opts[key] = !cur; el.classList.toggle('on', !cur); updateIrPreview();
+}
+function irEye(id) { const b = irBlk(id); if (!b) return; b.show = !b.show; renderIrBlocks(); updateIrPreview(); }
+function irDel(id) {
+  const i = irBlocks.findIndex(b => b.id === id);
+  if (i >= 0) { irBlocks.splice(i, 1); renderIrBlocks(); updateIrPreview(); }
+}
+function irAdd(type) {
+  const defs = {text: {text: '', align: 'left', size: 'md'}, divider: {style: 'solid'}, spacer: {height: 16}};
+  const id = 'x' + Math.random().toString(36).slice(2, 8);
+  irBlocks.push({id, type, show: true, opts: defs[type] || {}});
+  irSelId = id;
+  renderIrBlocks(); updateIrPreview();
+  const el = document.querySelector(`#irBlocks .ir-blk[data-id="${id}"]`);
+  if (el) { el.scrollIntoView({block: 'nearest', behavior: 'smooth'}); const ta = el.querySelector('textarea'); if (ta) ta.focus(); }
+}
+function irInsertVar(id, sel) {
+  const v = sel.value; sel.value = '';
+  if (!v) return;
+  const ta = document.querySelector(`#irBlocks .ir-blk[data-id="${id}"] textarea`);
+  const b = irBlk(id);
+  if (!ta || !b) return;
+  const st = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
+  const en = ta.selectionEnd != null ? ta.selectionEnd : st;
+  ta.value = ta.value.slice(0, st) + v + ta.value.slice(en);
+  b.opts.text = ta.value;
+  ta.focus(); ta.selectionStart = ta.selectionEnd = st + v.length;
+  updateIrPreview();
+}
+
+// Reorder / select / element-edit messages coming from the preview iframe
+window.addEventListener('message', e => {
+  const fr = document.getElementById('irFrame');
+  if (!fr || e.source !== fr.contentWindow) return;
+  const d = e.data || {};
+  if (d.ir === 'reorder') { irPopClose(); irMove(d.from, d.to); }
+  else if (d.ir === 'select') {
+    irSelId = d.id; renderIrBlocks();
+    const el = document.querySelector(`#irBlocks .ir-blk[data-id="${d.id}"]`);
+    if (el) el.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+  }
+  else if (d.ir === 'el') irPopOpen(d);
+  // Live inline typing on the preview: store the text without re-rendering the
+  // iframe (would lose the caret); the iframe re-renders itself on blur.
+  else if (d.ir === 'eltext') {
+    const o = irEl[d.key] || (irEl[d.key] = {});
+    if (d.text) o.text = d.text; else delete o.text;
+    if (Object.keys(o).length === 0) delete irEl[d.key];
+  }
+  else if (d.ir === 'eldesel') irPopClose();
+  // Corner-handle resize: the iframe already shows the live size, just store it.
+  else if (d.ir === 'elsize') {
+    const o = irEl[d.key] || (irEl[d.key] = {});
+    o.width = d.width; o.height = d.height;
+  }
+});
+
+// ── Element editor popover ─────────────────────────────────────────────────────
+let irPopMsg = null;   // last {key, name, def, editable, rect} from the iframe
+
+// Map an element key to the Layout block card it belongs to (popover docks there)
+const IR_KEY_BLOCK = [
+  [/^(co_|title$|inv_)/, 'header'], [/^(lbl_|val_)/, 'meta'], [/^(th_|items_rows$)/, 'items'],
+  [/^tot_/, 'totals'], [/^pay_/, 'payment'], [/^(reg_note|footer_text)$/, 'footer'],
+];
+function irKeyBlockId(key) {
+  const m = IR_KEY_BLOCK.find(([re]) => re.test(key));
+  const b = m && irBlocks.find(x => x.type === m[1]);
+  return b ? b.id : null;
+}
+
+function irPopOpen(msg) {
+  irPopMsg = msg;
+  const o = irEl[msg.key] || {};
+  document.getElementById('irPopName').textContent = msg.name;
+  document.getElementById('irPopVarWrap').style.display = msg.editable ? '' : 'none';
+  document.getElementById('irPopHint').textContent = msg.editable
+    ? 'Type directly on the invoice to edit this text. Drag the corner handle to resize the box.'
+    : 'Dynamic value — content comes from the transaction. Font style can still be customized. Drag the corner handle to resize the box.';
+  document.getElementById('irPopSize').value = o.size || '';
+  irPopPaintTri('irPopB', o.bold);
+  irPopPaintTri('irPopI', o.italic);
+  document.getElementById('irPopColor').value = o.color || '#18181b';
+  document.getElementById('irPopFam').value = o.family || '';
+  // fill variable dropdown once
+  const varSel = document.querySelector('#irPopVarWrap select');
+  if (varSel.options.length <= 1)
+    InvoiceTemplate.PLACEHOLDERS.forEach(p => varSel.add(new Option('{' + p + '}', '{' + p + '}')));
+  // dock the popover inside the matching Layout card (keeps the preview clear)
+  const pop = document.getElementById('irPop');
+  const bid = irKeyBlockId(msg.key);
+  if (bid) {
+    if (irSelId !== bid) { irSelId = bid; renderIrBlocks(); }
+    const card = document.querySelector(`#irBlocks .ir-blk[data-id="${bid}"]`);
+    if (card) {
+      pop.classList.add('docked');
+      pop.style.left = ''; pop.style.top = '';
+      card.appendChild(pop);
+      pop.style.display = 'block';
+      pop.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+      return;
+    }
+  }
+  // fallback: float next to the clicked element (below, or above if no room)
+  pop.classList.remove('docked');
+  document.body.appendChild(pop);
+  pop.style.display = 'block';
+  const fr = document.getElementById('irFrame').getBoundingClientRect();
+  const pw = 290, ph = pop.offsetHeight || 210;
+  let left = fr.left + msg.rect.x;
+  let top  = fr.top + msg.rect.y + msg.rect.h + 8;
+  left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+  if (top + ph > window.innerHeight - 8) top = Math.max(8, fr.top + msg.rect.y - ph - 8);
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+}
+function irPopClose() {
+  const pop = document.getElementById('irPop');
+  pop.style.display = 'none';
+  pop.classList.remove('docked');
+  document.body.appendChild(pop);
+  irPopMsg = null;
+}
+function irPopPaintTri(id, v) {
+  const b = document.getElementById(id);
+  b.classList.toggle('on',  v === true);
+  b.classList.toggle('off', v === false);
+}
+// bold/italic cycle: default → on → off → default
+function irPopCycle(field, btn) {
+  if (!irPopMsg) return;
+  const o = irEl[irPopMsg.key] || {};
+  const cur = o[field];
+  irElSet(field, cur === true ? false : cur === false ? null : true);
+  irPopPaintTri(btn.id, (irEl[irPopMsg.key] || {})[field]);
+}
+function irElSet(field, val) {
+  if (!irPopMsg) return;
+  const key = irPopMsg.key;
+  const o = irEl[key] || (irEl[key] = {});
+  if (val === null || val === '' || val === undefined) delete o[field];
+  else o[field] = val;
+  if (Object.keys(o).length === 0) delete irEl[key];
+  updateIrPreview();
+}
+function irPopReset() {
+  if (!irPopMsg) return;
+  delete irEl[irPopMsg.key];
+  const msg = irPopMsg;
+  updateIrPreview();
+  irPopOpen(msg);   // repaint popover with defaults
+}
+function irPopInsertVar(sel) {
+  const v = sel.value; sel.value = '';
+  if (!v || !irPopMsg) return;
+  const o = irEl[irPopMsg.key] || {};
+  const cur = (o.text != null && o.text !== '') ? o.text : irPopMsg.def;
+  irElSet('text', cur + v);
+}
+
+function resetIrStyle() {
+  if (!confirm('Reset layout, fonts and all element customizations to the default template?\n\nCompany info is kept.')) return;
+  irAccent = '';
+  irEl = {};
+  document.getElementById('irAccent').value = '#ff6600';
+  irBlocks = JSON.parse(JSON.stringify(InvoiceTemplate.defaultBlocks({})));
+  irSelId = null;
+  irPopClose();
+  renderIrBlocks(); updateIrPreview();
+}
+
+async function saveIr() {
+  if (!irMid) return;
+  const btn = document.getElementById('bIrSave');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await fetch('/api/admin/invoice-settings', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({mid: irMid, settings: collectIr()})
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast('Save failed: ' + (d.error || 'unknown error')); return; }
+    showToast('Invoice template saved ✓');
+    closeIr();
+  } catch (e) { showToast('Save failed: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Save'; }
+}
+
+</script>
+</body>
+</html>
