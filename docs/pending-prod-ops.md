@@ -7,7 +7,11 @@ Each entry stays here until it has been run, then gets struck out with the date.
 
 ## 1. Delete the future-date cache files left by the `fetch_tickets` bug
 
-**Status:** pending
+**Status:** DONE — 2026-10-01, nothing to delete. The 06:00 sync of 2026-10-01
+force-refetched 2026-09-30 as "yesterday" and both files repaired themselves, exactly
+as the note below predicted: WANNA BE TRADING came back with 138 tickets (382 KB) and
+3FS 288 with 2 (2.5 KB). The dry run reported `to delete: 0`. The guard shipped in
+v1.3.0, so no new ones can appear. Kept here as the record of what happened.
 **Recorded:** 2026-09-30
 **Fixed in code by:** the `if bdate > today: return []` guard in `fetch_tickets`
 (`run.py`) — the guard stops *new* bad files, it does **not** clean up the
@@ -104,7 +108,7 @@ needed — the files are read from disk on demand.
 
 ---
 
-## 2. Nothing else — the rest of this round is plain code, deployed by the normal tar/scp
+## 2. Deployed in v1.3.0 on 2026-10-01 — no manual step was needed
 
 Recorded 2026-09-30, for context when reading entry 1 at deploy time. These went
 out with the code and need no manual step on the server:
