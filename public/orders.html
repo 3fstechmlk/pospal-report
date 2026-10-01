@@ -18,7 +18,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;fo
 .nav-link{color:#a1a1aa;font-size:12px;font-weight:500;text-decoration:none;padding:5px 10px;border-radius:6px;transition:color .15s,background .15s}
 .nav-link:hover{color:#fff;background:rgba(255,255,255,.08)}
 .nav-link.active{color:#fff;background:rgba(255,102,0,.25)}
-.vbadge{font-size:11px;color:#52525b;background:#27272a;padding:3px 8px;border-radius:4px}
+/* On the dark topbar the chip itself reads fine; only its text was too dim —
+   #52525b on #27272a is 1.93:1, under the 4.5:1 AA floor. #a1a1aa gives 5.81:1
+   and leaves the chip colour alone. */
+.vbadge{font-size:11px;color:#a1a1aa;background:#27272a;padding:3px 8px;border-radius:4px}
 .btn-logout{background:none;border:1px solid #3f3f46;border-radius:6px;color:#a1a1aa;font-size:12px;padding:5px 12px;cursor:pointer;transition:color .15s,border-color .15s}
 .btn-logout:hover{color:#fff;border-color:#71717a}
 

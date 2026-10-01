@@ -2,6 +2,20 @@
 
 ---
 
+## v1.3.1 — 2026-10-01
+
+### Fixed
+
+- **Version badge was barely legible.** All four pages drew it as `#52525b` text on
+  a `#27272a` chip — 1.93:1, well under the 4.5:1 AA floor. In the admin console it
+  was worse than dim: that dark chip sat in the light toolbar between two outlined
+  buttons, looking out of place. The admin badge now follows the outlined-button
+  style (grey on white, 4.83:1, orange on hover at 4.93:1); on Sales Report,
+  Transactions and Payment Report the chip stays dark to match the topbar and only
+  the text was lifted to `#a1a1aa` (5.81:1).
+
+---
+
 ## v1.3.0 — 2026-10-01
 
 ### Fixed

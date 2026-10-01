@@ -9,34 +9,109 @@
 
 ---
 
-## Deploy ("部署上线" / "上线去console" / "部署" / "上线")
+## Deploy SOP ("部署上线" / "上线去console" / "部署" / "上线")
 
-When the user says any of the above, run these steps in order (same pattern as the
-Workflow project: tar → scp → extract + restart).
+六步，按顺序走，不得跳步。前四步不碰服务器，随时可以中止。
 
-**Step 1 — Package project (excluding runtime data and local-only files)**
+### Step 1 — 确认版本号
+
+决定这次发什么版本，改 `run.py` 的 `VERSION`：
+
+- 行为/功能变化 → minor（1.3.0 → 1.4.0）
+- 只修 bug 或改 UI，不改行为 → patch（1.3.0 → 1.3.1）
+
+版本号是验证部署有没有生效最省事的手段：页面右上角的徽章和 `/api/version` 都读它。
+**版本号没动的部署，无法从外部确认新代码真的跑起来了。**
+
+### Step 2 — 更新 Update History
+
+把这次的改动写进 `CHANGELOG.md`，格式照抄已有条目（`## v1.3.1 — YYYY-MM-DD` +
+`### Fixed` / `### New` / `### Security` 分节）。
+
+这个文件就是 `/admin` 版本徽章点开后显示的 Update History（经 `/api/changelog`
+下发），所以它是写给商户和自己看的，不是写给 git 看的 —— 要写清楚**用户能感知到
+什么**，而不是改了哪个函数。
+
+### Step 3 — 本地验证
+
+- `python -m py_compile run.py`
+- 改过的每个页面：抽出 `<script>` 跑 `node --check`
+- 能在本地起服务就起（`preview_start`，端口 8081），实际点一遍改动的地方
+
+### Step 4 — Push 到 GitHub（**部署前必须完成**）
+
+```bash
+git add -A && git commit && git push
+```
+
+远端：`https://github.com/3fstechmlk/pospal-report`，分支 `pospal-main`。
+
+**先推后部署，不能反过来。** 服务器上没有代码的版本管理，部署是直接 tar 覆盖；
+推上去的那个 commit 就是这次上线内容的唯一凭据，出事了才知道线上到底是什么。
+
+> 历史包袱：仓库里另有 `main` / `master` 两条旧线和 4 个 tag，含一家在营商户
+> （YOU MI KITCHEN）硬编码在旧 PHP/Node 实现里的真实 appId/appKey。**那两条线和
+> 那些 tag 永远不要推。** 只推 `pospal-main`。那把 key 该轮换。
+
+### Step 5 — 部署上线
+
+**5.1 先快照线上代码** —— 这是唯一的回滚点，`backup.sh` 只备份 `data/` 和
+`cache/`，不备份代码：
+
+```bash
+ssh -i "/c/Users/JONA TAI/.ssh/id_ed25519" -o StrictHostKeyChecking=no root@5.223.80.199 "cd /opt/pospal-report && tar -czf /opt/pospal-backups/code_before_$(date +%Y%m%d_%H%M%S).tar.gz --exclude='./data' --exclude='./cache' --exclude='./.git' --exclude='./__pycache__' --exclude='./pospal-report' --exclude='./legacy' --exclude='./.playwright-mcp' . && ls -lh /opt/pospal-backups/code_before_*.tar.gz | tail -1"
+```
+
+排除项不能省：服务器上那个 stale 的 `pospal-report/` 嵌套目录里有它自己的 cache，
+少排一项，快照就从 500K 变成 626M。
+
+**5.2 打包**
+
 ```bash
 cd "/c/project/pospal-report" && tar -czf /tmp/pospal_deploy.tar.gz --exclude='./data' --exclude='./cache' --exclude='./ssh' --exclude='./.git' --exclude='./.claude' --exclude='./pospal-report' --exclude='./__pycache__' --exclude='*.pyc' --exclude='./.DS_Store' --exclude='./node_modules' --exclude='./legacy' .
 ```
 
-**Step 2 — Upload to server**
+**5.3 上传**
+
 ```bash
 scp -i "/c/Users/JONA TAI/.ssh/id_ed25519" -o StrictHostKeyChecking=no /tmp/pospal_deploy.tar.gz root@5.223.80.199:/tmp/pospal_deploy.tar.gz
 ```
 
-**Step 3 — Extract and restart service**
+**5.4 解包 + 重启**
+
 ```bash
-ssh -i "/c/Users/JONA TAI/.ssh/id_ed25519" -o StrictHostKeyChecking=no root@5.223.80.199 "cd /opt/pospal-report && tar -xzf /tmp/pospal_deploy.tar.gz --exclude='./data' --exclude='./cache' && rm /tmp/pospal_deploy.tar.gz && systemctl restart pospal && sleep 2 && systemctl status pospal --no-pager | head -8"
+ssh -i "/c/Users/JONA TAI/.ssh/id_ed25519" -o StrictHostKeyChecking=no root@5.223.80.199 "cd /opt/pospal-report && tar -xzf /tmp/pospal_deploy.tar.gz --exclude='./data' --exclude='./cache' && rm /tmp/pospal_deploy.tar.gz && systemctl restart pospal && sleep 3 && systemctl status pospal --no-pager | head -8"
 ```
 
-- Server: 5.223.80.199
-- SSH key: `C:\Users\JONA TAI\.ssh\id_ed25519`
-- Remote path: `/opt/pospal-report/`
-- Service name: `pospal`
-- **Never upload or overwrite the `data/` folder (contains production DB) or the
-  `cache/` folder (server-side ticket cache is newer than local)**
-- Never upload `ssh/` (contains a private key copy), `.claude/`, or the stale
-  nested `pospal-report/` folder
+### Step 6 — 验证
+
+```bash
+ssh -i "/c/Users/JONA TAI/.ssh/id_ed25519" -o StrictHostKeyChecking=no root@5.223.80.199 "curl -s http://localhost:8080/api/version; echo; systemctl is-active pospal; journalctl -u pospal --since '3 minutes ago' -p err --no-pager --quiet | tail -3"
+```
+
+`/api/version` 必须返回 Step 1 定的那个号。不对就是没生效。再打开 `/admin`，
+点版本徽章，确认 Update History 里是这次写的条目。
+
+---
+
+## 部署须知
+
+- Server: `5.223.80.199` ｜ Remote: `/opt/pospal-report/` ｜ Service: `pospal`
+  ｜ Port: 8080 ｜ SSH key 见上面命令里的路径
+
+- **`cache/` 在服务器上是符号链接**，指向 `/mnt/HC_Volume_105461195/pospal-cache`
+  （45G 独立卷）。本地的 `cache/` 是真实目录。打包和解包的 `--exclude='./cache'`
+  **一个都不能漏** —— 漏了会用本地目录覆盖掉那个符号链接，850 家商户的缓存当场
+  与程序脱钩。`data/`（33M，含全部 appKey 和商户密码）同理。
+
+- 重启的副作用，都是预期内的：所有商户会掉线（session 存在内存里，各页会把 401
+  干净地送回登录页）；今天的 `_mem` 清空，下一个开报表的人会触发一次实时抓取。
+
+- `data/config.json` 存的是**明文** admin 密码，`CONFIG` 只在启动时读一次 ——
+  改密码必须重启才生效。
+
+- 服务器上 `/opt/pospal-report/pospal-report/` 是旧版本的完整副本，占 8.1G，
+  当前程序完全不碰它。要清理得先确认里面没有顶层 cache 缺失的日期。
 
 ---
 
