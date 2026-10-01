@@ -124,6 +124,16 @@ input.search:focus{border-color:var(--or)}
 .modal-head{padding:18px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
 .modal-head h3{font-size:15px;font-weight:700}
 .modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--gy);line-height:1;padding:0 4px}
+.vbtn{font-size:11px;color:#52525b;background:#27272a;border:1px solid transparent;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:inherit;transition:color .15s,border-color .15s}
+.vbtn:hover{color:#fafafa;border-color:#3f3f46}
+.cl-body{padding:4px 22px 22px;overflow-y:auto}
+.cl-body h3{font-size:14px;font-weight:700;color:var(--or);margin:18px 0 8px}
+.cl-body .sub{font-size:11px;font-weight:700;color:var(--gy);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 4px}
+.cl-body ul{margin:0 0 6px;padding-left:18px;list-style:disc;color:#3f3f46;font-size:12.5px;line-height:1.75}
+.cl-body li{margin:3px 0}
+.cl-body p{color:#3f3f46;font-size:12.5px;line-height:1.7;margin:4px 0}
+.cl-body code{background:#f4f4f5;padding:1px 5px;border-radius:4px;font-family:'Menlo','Consolas',monospace;font-size:11.5px}
+.cl-body hr{border:none;border-top:1px solid var(--bd);margin:16px 0}
 .modal-close:hover{color:var(--dk)}
 .modal-body{padding:22px}
 .modal-foot{padding:14px 22px;border-top:1px solid var(--bd);display:flex;gap:10px;justify-content:flex-end}
@@ -272,7 +282,7 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
       <button class="pill"    data-filter="deactivated" onclick="setFilter('deactivated')">Deactivated</button>
     </div>
     <button class="btn btn-p btn-sm" onclick="openAdd()">+ Add Merchant</button>
-    <span id="versionBadge" style="font-size:11px;color:#52525b;background:#27272a;padding:3px 8px;border-radius:4px"></span>
+    <button id="versionBadge" class="vbtn" onclick="openChangelog()" title="View update history"></button>
     <button class="btn btn-g btn-sm" onclick="doLogout()">Log Out</button>
   </div>
 
@@ -408,6 +418,16 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
 </div>
 
 <!-- ── Reset Password Modal ──────────────────────────────────────────────── -->
+<div class="overlay" id="clModal" onclick="if(event.target===this)closeChangelog()">
+  <div class="modal" style="width:560px">
+    <div class="modal-head">
+      <h3>🚀 Update History</h3>
+      <button class="modal-close" onclick="closeChangelog()">×</button>
+    </div>
+    <div class="cl-body" id="clBody"><p style="color:var(--gy);padding:16px 0">Loading…</p></div>
+  </div>
+</div>
+
 <div class="overlay" id="pwModal" onclick="if(event.target===this)closePwModal()">
   <div class="modal" style="width:380px">
     <div class="modal-head">
@@ -523,6 +543,48 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
   };
 })();
 fetch('/api/version').then(r=>r.json()).then(d=>{const el=document.getElementById('versionBadge');if(el)el.textContent='v'+d.version;}).catch(()=>{});
+
+// ── Update history ──────────────────────────────────────────────────
+// Reads CHANGELOG.md through /api/changelog and renders the subset of Markdown
+// that file actually uses, the same way the Workflow project does it.
+function _mdInline(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+          .replace(/`(.+?)`/g,'<code>$1</code>');
+}
+function _renderChangelog(md) {
+  let html = '', inList = false;
+  const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+  md.split('\n').forEach(raw => {
+    const line = raw.trim();
+    if (line.startsWith('## '))       { closeList(); html += `<h3>${_mdInline(line.slice(3))}</h3>`; }
+    else if (line.startsWith('### ')) { closeList(); html += `<div class="sub">${_mdInline(line.slice(4))}</div>`; }
+    else if (line.startsWith('# '))   { /* file title — the modal has its own */ }
+    else if (line.startsWith('---'))  { closeList(); html += '<hr>'; }
+    else if (line.startsWith('- '))   {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${_mdInline(line.slice(2))}</li>`;
+    }
+    else if (line === '')             { closeList(); }
+    else                              { closeList(); html += `<p>${_mdInline(line)}</p>`; }
+  });
+  closeList();
+  return html;
+}
+function closeChangelog() { document.getElementById('clModal').classList.remove('show'); }
+async function openChangelog() {
+  const body = document.getElementById('clBody');
+  document.getElementById('clModal').classList.add('show');
+  body.innerHTML = '<p style="color:var(--gy);padding:16px 0">Loading…</p>';
+  try {
+    const r = await fetch('/api/changelog', {headers: authHeaders()});
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Failed');
+    body.innerHTML = _renderChangelog(d.changelog || '');
+  } catch (e) {
+    body.innerHTML = '<p style="color:var(--re);padding:16px 0">Could not load the changelog.</p>';
+  }
+}
 // ── State ──────────────────────────────────────────────────────────────────────
 let TOKEN         = sessionStorage.getItem('adminToken') || '';
 let merchants     = [];

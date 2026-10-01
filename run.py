@@ -17,7 +17,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 
-VERSION  = '1.2.1'
+VERSION  = '1.3.0'
 SSL_CTX  = ssl._create_unverified_context()
 PORT     = int(os.environ.get('PORT') or 8080)   # env override so a local copy can run beside 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -2489,6 +2489,18 @@ class Handler(BaseHTTPRequestHandler):
 
         if pt == '/api/version':
             self._json({'version': VERSION}); return
+
+        if pt == '/api/changelog':
+            # Admin-only: the file names merchants and describes internals.
+            if not self._admin_auth():
+                self._json({'ok': False, 'error': 'Unauthorized'}, 401); return
+            path = os.path.join(BASE_DIR, 'CHANGELOG.md')
+            try:
+                with open(path, encoding='utf-8') as f:
+                    text = f.read()
+            except Exception:
+                text = ''
+            self._json({'ok': True, 'version': VERSION, 'changelog': text}); return
 
         # ── Merchant API ───────────────────────────────────────────────────────
         if pt == '/api/merchant/me':

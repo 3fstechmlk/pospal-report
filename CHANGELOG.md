@@ -1,56 +1,75 @@
-# Changelog — 3FS Workflow
+# Changelog — Pospal Report
 
 ---
 
-## v1.2 — 2026-04-15
+## v1.3.0 — 2026-10-01
 
-### New Features
-- **Keivi Workflow** — dedicated board for Keivi FA clients, separate from Pospal
-  - Stages: Financial Assessment → Pending Onboard → Onboarding → Activation → Key into Google Sheet → Onboarded → Completed / Failed / Refund/CN
-  - Auto-derived status badge: Trial (Onboarding/Activation), ✓ Live (Key into Google Sheet/Onboarded/Completed), Fail (Failed/Refund/CN) — no manual selection needed
-  - Delete client button (🗑) in modal footer with confirmation
-- **Unified Payments Page** — `/payments` now shows both Pospal and Keivi clients
-  - Source filter tabs: All Sources / Pospal / Keivi
-  - Source badge column in table
-  - Single modal handles both sources
-- **Payment History Tracking** — every payment update is recorded
-  - History stored in `payment_history` table (old/new status, old/new balance, note, timestamp, operator)
-  - History tab in payment modal with visual timeline (color-coded status badges)
-- **FA Panel improvements**
-  - FA panel is now editable in **all Keivi stages**, not just Pending Onboard
-  - **Save Changes** saves FA fields (payment status, balance, service ticks) — no separate Update FA button needed
-  - Ticking/unticking a service (E-invoice, Payment Gateway, etc.) auto-creates or **deletes** the linked task
-  - "View in Payments →" link in FA panel
+### Fixed
 
-### UI / Branding
-- **"Account Setup" renamed to "Pospal"** across all sidebar nav labels and board headers
-- **Pospal icon** (pospal-icon.png) replaces 📋 emoji in all sidebars
-- **Keivi icon** (keivi-icon.png / mark-color.png) replaces 🟠 emoji in all sidebars
-- **LHDN logo** (einvoice-icon.png) replaces 🧾 emoji for E-invoice sidebar link
-- **Revenue Monster logo** (paymentgw-icon.png) replaces 💳 emoji for Payment GW sidebar link
-- **Pospal Form (`/form`)** — full redesign: card-based UI, mobile-responsive, Pospal branding, 30-min time picker
-- **Keivi Form (`/keivi-form`)** — same redesign: split date + time selects, 30-min intervals (08:00–20:00)
-- Google OAuth credentials pre-filled on Team page (client secret no longer disappears)
+- **A future date could freeze a whole day's sales at zero.** Querying a date that
+  had not arrived yet cached Pospal's empty answer to disk. On the day itself that
+  empty file was served instead of the live data, so the Transactions, Sales Report
+  and Payment pages all read zero — and no API call was made, so nothing corrected
+  it until the next 06:00 sync. `fetch_tickets` now refuses future dates outright,
+  and the date picker no longer lets one be selected.
+- **A stale session left pages looking signed in.** Sessions live in the server's
+  memory, so a restart invalidated every token while the browser kept the string.
+  Only the Sales Report noticed; Transactions and Payment Report sat there until
+  something failed with "Not logged in". All four protected pages now handle a 401
+  centrally and return to the sign-in screen.
+- **Admin error messages never appeared.** The stylesheet hides `.msg` by default
+  and the code cleared the inline style instead of setting it, so a wrong password
+  looked like nothing happened. Six places fixed.
+- Payment Report read the live Pospal quota on every page load just to show the
+  cached-days count, spending API calls for a number held locally. Opening that
+  page is free now.
 
-### Bug Fixes
-- FA E-invoice untick now correctly **deletes** the linked task (previously only created, never deleted)
-- Save Changes now saves FA fields — previously read from wrong DOM element
-- Google team page "Not set up" — `clientSecret` now returned by `/api/google-status`
-- Deploy path corrected to `/opt/pospal-report/` (previously syncing to wrong `/root/pospal-report/`)
+### New
 
-### Infrastructure
-- Git repo initialized; v1.0 and v1.2 tagged
-- DB backed up before each major deploy
-- `CLAUDE.md` added — "上线去console" auto-deploy command documented
-- `static/` folder added for icon assets
+- **API quota meter on all three merchant pages.** The ↻ button is two-stage: the
+  first click shows what is already known and costs nothing, a second click reads
+  the exact figure from Pospal (that read costs one call). The badge and the
+  5-minute countdown survive a page reload.
+- **Both Pospal remark fields are now visible.** A product remark shows under its
+  line in the expanded detail and on the printed invoice; a transaction remark
+  shows as its own panel. Both are in the Excel export as new columns, and the
+  invoice template gained toggles for each plus a `{ticket_remark}` placeholder.
+- The Transactions page reports what each load cost in API calls, alongside an
+  estimate of the day's total usage.
+
+### Security
+
+- The admin password is no longer printed at startup. systemd captured that line
+  into the journal, leaving it readable in plain text to anyone with `journalctl`.
 
 ---
 
-## v1.0 — 2026-04-14
+## v1.2.1 — 2026-08
 
-- Initial release: Pospal (Account Setup) kanban board
-- Asana data migration (416 records)
-- FA review workflow with Google Calendar sync
-- Linked tasks (E-invoice, Payment Gateway, Mall, QR Printing)
-- Archive page, QR Printing, Mall Integration boards
-- Team management, login/logout
+- Journal export: advanced pay-code mapping
+- SALES ON date in descending format
+
+---
+
+## v1.2 — 2026-08
+
+- Per-merchant `dayStartHour`, so shops that close after midnight get their takings
+  counted against the right day
+- Every export routed through `collect_day_tickets`, so exported figures match the
+  on-screen ones exactly
+
+---
+
+## v1.1 — 2026-07
+
+- Sales and Payment export
+- Version badge on all pages
+- AutoCount / SQL button marks
+
+---
+
+## v1.0 — 2026-06
+
+- Initial release: multi-merchant Pospal sales reporting
+- Daily sync with per-merchant API quota budgeting
+- Disk-backed ticket cache with backfill and gap-fill
