@@ -124,8 +124,16 @@ input.search:focus{border-color:var(--or)}
 .modal-head{padding:18px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
 .modal-head h3{font-size:15px;font-weight:700}
 .modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--gy);line-height:1;padding:0 4px}
-.vbtn{font-size:11px;color:#52525b;background:#27272a;border:1px solid transparent;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:inherit;transition:color .15s,border-color .15s}
-.vbtn:hover{color:#fafafa;border-color:#3f3f46}
+/* Sits in the light .toolbar between two outlined buttons, so it follows .btn-g's
+   language rather than the dark-topbar colours it used to carry: #52525b on #27272a
+   measured 1.93:1, well under the 4.5:1 AA floor. Rest is --gy on white (4.83:1);
+   hover uses a darker orange than --or because #f60 on the tinted background is
+   only 2.79:1. Monospace because it is a version number. */
+.vbtn{font-family:'Menlo','Consolas',monospace;font-size:11px;font-weight:600;letter-spacing:.2px;
+      color:var(--gy);background:var(--wh);border:1px solid var(--bd);padding:5px 10px;
+      border-radius:6px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+.vbtn:hover{color:#c2410c;border-color:#fdba74;background:#fff8f3}
+.vbtn:active{background:#ffedd5}
 .cl-body{padding:4px 22px 22px;overflow-y:auto}
 .cl-body h3{font-size:14px;font-weight:700;color:var(--or);margin:18px 0 8px}
 .cl-body .sub{font-size:11px;font-weight:700;color:var(--gy);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 4px}
