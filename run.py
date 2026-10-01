@@ -3527,7 +3527,9 @@ if __name__ == '__main__':
     print(f'  Merchant → http://localhost:{PORT}')
     print(f'  Admin    → http://localhost:{PORT}/admin')
     print(f'  Stop     → Ctrl + C')
-    print(f'  Admin PW : {CONFIG["adminPassword"]}\n')
+    # Never print the password: systemd captures stdout into the journal, which put
+    # it in plain text where anyone with journalctl could read it.
+    print(f'  Admin PW : (set in data/config.json)\n')
 
     # Flush state to disk on Ctrl+C / SIGTERM before exit
     def _shutdown(sig, frame):
