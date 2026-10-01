@@ -17,7 +17,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 
-VERSION  = '1.3.2'
+VERSION  = '1.3.3'
 SSL_CTX  = ssl._create_unverified_context()
 PORT     = int(os.environ.get('PORT') or 8080)   # env override so a local copy can run beside 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -552,7 +552,24 @@ PAY_METHOD_PATH = '/pospal-api2/openapi/v1/ticketOpenApi/queryMyPayMethod'
 _api_calls = {}
 _api_lock  = threading.Lock()
 
-def _count_call(mid):
+# What each call was spent on, for the admin usage breakdown. The keys are
+# written into sync_state.json, so renaming one orphans the history already on
+# disk — add a feature, never rename one. 'other' is the fallback for a call
+# site that was added without picking a label; it is NOT the same thing as the
+# "Unattributed" figure the UI shows, which is Pospal's count minus everything
+# this app managed to attribute.
+API_FEATURES = {
+    'sync'    : 'Daily Sync',
+    'tickets' : 'Report Pages',
+    'quota'   : 'Quota Checks',
+    'pay'     : 'Payment Methods',
+    'member'  : 'Member Lookup',
+    'category': 'Member Categories',
+    'other'   : 'Other',
+}
+USAGE_KEEP_DAYS = 8   # one more than the 7 days the quota log can show
+
+def _count_call(mid, feature='other'):
     """Count every API call (sync + report pages). Persists via sync state so count survives restart."""
     with _api_lock:
         _api_calls[mid] = _api_calls.get(mid, 0) + 1
@@ -566,7 +583,83 @@ def _count_call(mid):
             s['api_calls_total_today'] = 0
             s['api_calls_reset_date']  = today
         s['api_calls_total_today'] = s.get('api_calls_total_today', 0) + 1
+        # Per-feature tally, kept per day: the daily totals above are reset at
+        # midnight, but the admin log shows 7 days back, so each day's split has
+        # to be retained separately. Trimmed here rather than by a sweeper, so a
+        # merchant that stops being used stops growing on its own.
+        usage = s.setdefault('api_usage', {})
+        day   = usage.setdefault(today, {})
+        day[feature] = day.get(feature, 0) + 1
+        if len(usage) > USAGE_KEEP_DAYS:
+            for old in sorted(usage)[:-USAGE_KEEP_DAYS]:
+                usage.pop(old, None)
         _sync_state_dirty = True
+
+# ── Per-call API log ───────────────────────────────────────────────────────────
+# The counters above say a day cost 9 Report Pages calls; this says when each of
+# the 9 went out and what came back. One line per finished call.
+#
+# It lives beside the ticket cache rather than in data/ for three reasons: it is
+# by far the biggest thing this app writes per merchant, it is diagnostic so
+# losing it costs nothing, and data/ is what gets backed up. On the server
+# cache/ is the 45G volume, which has the room; data/ does not.
+#
+# JSONL because the only two operations are "append one line" and "read one
+# day". The '_api' subdirectory and the .jsonl suffix both keep these files out
+# of reach of /api/cache/clear, which deletes '*.json' one level down only.
+API_LOG_KEEP_DAYS = 8
+_alog_lock  = threading.Lock()
+_alog_swept = {}   # {mid: 'YYYY-MM-DD'} — old files trimmed once per merchant per day
+
+def _api_log_dir(mid):
+    return os.path.join(CACHE_DIR, mid, '_api')
+
+def _api_log(mid, feature, ok, summary=''):
+    """Append one line describing a call that has just finished.
+
+    Deliberately silent on failure: this is a diagnostic record, and it must
+    never be the reason the call it describes blows up.
+    """
+    try:
+        today = str(date.today())
+        d     = _api_log_dir(mid)
+        rec   = {'t' : int(time.time()), 'f': feature,
+                 'ok': 1 if ok else 0,  's': (summary or '')[:200]}
+        with _alog_lock:
+            os.makedirs(d, exist_ok=True)
+            with open(os.path.join(d, today + '.jsonl'), 'a', encoding='utf-8') as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + '\n')
+            # Trim once per merchant per day rather than per call — listing the
+            # directory on every API call would cost more than the log is worth.
+            if _alog_swept.get(mid) != today:
+                _alog_swept[mid] = today
+                keep = sorted(x for x in os.listdir(d) if x.endswith('.jsonl'))[-API_LOG_KEEP_DAYS:]
+                for old in os.listdir(d):
+                    if old.endswith('.jsonl') and old not in keep:
+                        try: os.remove(os.path.join(d, old))
+                        except OSError: pass
+    except Exception:
+        pass
+
+def read_api_log(mid, day):
+    """Every logged call for one business date, oldest first. [] when none."""
+    path = os.path.join(_api_log_dir(mid), f'{day}.jsonl')
+    out  = []
+    try:
+        with open(path, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    out.append(json.loads(line))
+                except Exception:
+                    pass   # one torn line must not hide the rest of the day
+    except FileNotFoundError:
+        pass
+    except Exception as ex:
+        print(f'  [apilog] read error {mid}/{day}: {ex}')
+    return out
 
 # ── Pospal real quota (cached 5 min per merchant) ──────────────────────────────
 _quota_cache = {}   # {mid: {'used': int, 'limit': int, 'left': int, 'ts': float}}
@@ -598,7 +691,7 @@ def fetch_pospal_quota(merchant):
 
     today = str(date.today())
     try:
-        _count_call(mid)   # this very query counts against the merchant's daily limit
+        _count_call(mid, 'quota')   # this very query counts against the merchant's daily limit
         res   = pospal_post(merchant['appId'], merchant['appKey'], QUOTA_PATH,
                             {'appId': merchant['appId'],
                              'beginDate': today, 'endDate': today},
@@ -620,8 +713,10 @@ def fetch_pospal_quota(merchant):
                   'date': today, 'local_at_read': local_now}
         with _qc_lock:
             _quota_cache[mid] = result
+        _api_log(mid, 'quota', True, f'live reading · {used}/{limit} used')
         return result
     except Exception as ex:
+        _api_log(mid, 'quota', False, f'live reading failed · {ex}')
         print(f'  [quota] {merchant.get("name","?")} error: {ex}')
         return None
 
@@ -660,16 +755,19 @@ def fetch_pospal_quota_log(merchant, days=QUOTA_LOG_MAX_DAYS):
     days  = max(1, min(int(days), QUOTA_LOG_MAX_DAYS))
     end   = date.today()
     begin = end - timedelta(days=days - 1)
-    _count_call(merchant['id'])
+    _count_call(merchant['id'], 'quota')
     res = pospal_post(merchant['appId'], merchant['appKey'], QUOTA_PATH,
                       {'appId'    : merchant['appId'],
                        'beginDate': str(begin), 'endDate': str(end)},
                       host=merchant.get('host'))
     if str(res.get('status', '')).lower() != 'success':
         msgs = res.get('messages') or []
-        raise RuntimeError(msgs[0] if msgs else 'Pospal returned an error')
+        err  = msgs[0] if msgs else 'Pospal returned an error'
+        _api_log(merchant['id'], 'quota', False, f'{days}-day log failed · {err}')
+        raise RuntimeError(err)
 
     raw  = res.get('data') or []
+    _api_log(merchant['id'], 'quota', True, f'{days}-day log · {len(raw)} rows returned')
     mine = str(merchant['appId'] or '').upper()
     # Pospal answers with one row per appId in the merchant's CHAIN, not just the
     # one we authenticated with — a Butter & Olive query comes back with all 8
@@ -820,15 +918,17 @@ def fetch_pay_methods(merchant, force=False):
         host    = merchant.get('host')
 
         # Step 1: queryAllPayMethod — all system-level codes with names (no date filter)
-        _count_call(mid)
+        _count_call(mid, 'pay')
         res_all  = pospal_post(app_id, app_key,
                                '/pospal-api2/openapi/v1/ticketOpenApi/queryAllPayMethod',
                                {'appId': app_id}, host=host)
+        _api_log(mid, 'pay', True, f'all pay methods · {len(res_all.get("data") or [])} codes')
         # Step 2: queryMyPayMethod — merchant-configured codes with custom showName
-        _count_call(mid)
+        _count_call(mid, 'pay')
         res_mine = pospal_post(app_id, app_key,
                                '/pospal-api2/openapi/v1/ticketOpenApi/queryMyPayMethod',
                                {'appId': app_id}, host=host)
+        _api_log(mid, 'pay', True, f'merchant pay methods · {len(res_mine.get("data") or [])} codes')
 
         # Priority (lowest → highest): KNOWN_PAY_CODES → queryAllPayMethod → queryMyPayMethod showName → payOverrides
         m = dict(KNOWN_PAY_CODES)
@@ -851,6 +951,7 @@ def fetch_pay_methods(merchant, force=False):
         print(f'  [pay_methods] {merchant.get("name","?")} fetched {total} methods total')
         return m
     except Exception as ex:
+        _api_log(mid, 'pay', False, f'pay methods failed · {ex}')
         print(f'  [pay_methods] {merchant.get("name","?")} error: {ex}, using disk/fallback')
         with _pm_lock:
             if mid in _pay_methods:
@@ -948,7 +1049,7 @@ def get_customers(merchant, uids, max_age):
 
     def fetch_one(u):
         try:
-            _count_call(mid)
+            _count_call(mid, 'member')
             res = pospal_post(merchant['appId'], merchant['appKey'], CUSTOMER_PATH,
                               {'appId': merchant['appId'], 'customerUid': int(u)},
                               host=merchant.get('host'))
@@ -956,8 +1057,12 @@ def get_customers(merchant, uids, max_age):
                 d   = res.get('data') or {}
                 rec = {k: d.get(k) for k in CUSTOMER_FIELDS}
                 rec['ts'] = time.time()
+                _api_log(mid, 'member', True,
+                         f'uid {u} · {d.get("name") or "(no name found)"}')
                 return u, rec   # a deleted member yields a blank record — cached, so we stop asking
+            _api_log(mid, 'member', False, f'uid {u} · {res.get("status") or "no data"}')
         except Exception as ex:
+            _api_log(mid, 'member', False, f'uid {u} · {ex}')
             print(f'  [customer] {merchant.get("name","?")} uid {u}: {ex}')
         return u, None          # transient failure — leave uncached so the next request retries
 
@@ -1066,7 +1171,7 @@ def merchant_activity_stats(merchant):
         _stats_cache[mid] = {'data': result, 'ts': now}
     return result
 
-def fetch_tickets(merchant, bdate, cache_only=False, force=False):
+def fetch_tickets(merchant, bdate, cache_only=False, force=False, source='tickets'):
     """Fetch tickets for one business date.
     cache_only=True: return [] instead of hitting Pospal API if date is not cached.
                      Used by report endpoints to avoid consuming sync quota.
@@ -1117,23 +1222,30 @@ def fetch_tickets(merchant, bdate, cache_only=False, force=False):
         while pages < 100:   # safety: max 100 pages (~10,000 tickets) per day
             body = {'appId': merchant['appId'], 'startTime': st, 'endTime': et}
             if post_back: body['postBackParameter'] = post_back
-            _count_call(mid)
+            _count_call(mid, source)
             pages += 1
             res = pospal_post(merchant['appId'], merchant['appKey'], TICKET_PATH, body,
                               host=merchant.get('host'))
             if res.get('status') != 'success':
                 msgs = res.get('messages', [])
-                raise RuntimeError(f"[{merchant['name']} {bdate}] " +
-                                   ', '.join(str(m) for m in (msgs or ['API error'])))
+                err  = ', '.join(str(m) for m in (msgs or ['API error']))
+                _api_log(mid, source, False, f'{bdate} · page {pages} failed · {err}')
+                raise RuntimeError(f"[{merchant['name']} {bdate}] " + err)
             data      = res.get('data', {})
             tickets   = data.get('result', data.get('ticketList', []))
+            # One line per page, because one page is one call against the quota.
+            _api_log(mid, source, True, f'{bdate} · page {pages} · {len(tickets)} tickets')
             all_t.extend(tickets)
             post_back = data.get('postBackParameter')
             if not post_back or not post_back.get('parameterValue'): break
             time.sleep(0.5)
         else:
             print(f'  [sync] {merchant["name"]} {bdate} hit 100-page limit ({len(all_t)} tickets)')
-    except Exception:
+    except Exception as ex:
+        # A transport-level failure never reached the status check above, so it
+        # has not been logged yet. RuntimeError has, hence the type test.
+        if not isinstance(ex, RuntimeError):
+            _api_log(mid, source, False, f'{bdate} · page {pages} failed · {ex}')
         if stale is not None:
             return stale   # API failed — keep serving the last fetched copy of today
         raise
@@ -1383,8 +1495,15 @@ def _flush_sync_state():
         snapshot = dict(_sync_state_mem)
         _sync_state_dirty = False
     try:
-        with open(SYNC_STATE_FILE, 'w', encoding='utf-8') as f:
+        # Atomic, same as _save_ms and _save_pay_methods_to_disk: writing in
+        # place truncates to 0 first, and this file now carries the per-feature
+        # usage history as well, so an interrupted write would take every
+        # merchant's backfill position with it. Rename is the only step that
+        # touches the real path, and it either happens or it does not.
+        tmp = SYNC_STATE_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
             json.dump(snapshot, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, SYNC_STATE_FILE)
     except Exception as e:
         print(f'  [sync] state flush error: {e}')
 
@@ -1485,7 +1604,7 @@ def sync_merchant(merchant):
             return None, 0                  # quota gone, cannot fetch
         before = _api_calls.get(mid, 0)
         try:
-            tickets = fetch_tickets(merchant, bdate_str, force=force)
+            tickets = fetch_tickets(merchant, bdate_str, force=force, source='sync')
         except Exception as ex:
             after = _api_calls.get(mid, 0)
             calls_used += max(0, after - before)
@@ -2522,14 +2641,17 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({'ok': False, 'error': 'Merchant not found'}, 404); return
             try:
                 CAT_PATH = '/pospal-api2/openapi/v1/customerOpenApi/queryAllCustomerCategory'
-                _count_call(mid)
+                _count_call(mid, 'category')
                 res = pospal_post(m['appId'], m['appKey'], CAT_PATH, {'appId': m['appId']}, host=m.get('host'))
                 if res.get('status') != 'success':
+                    _api_log(mid, 'category', False, 'POSPAL error')
                     self._json({'ok': False, 'message': 'POSPAL error'}); return
                 cats = [{'name': c['name'], 'discount': c.get('discount')}
                         for c in (res.get('data') or []) if c.get('enable') == 1]
+                _api_log(mid, 'category', True, f'{len(cats)} active categories')
                 self._json({'ok': True, 'categories': cats})
             except Exception as e:
+                _api_log(mid, 'category', False, str(e))
                 self._json({'ok': False, 'message': str(e)}, 503)
 
         elif pt == '/api/merchant/invoice-settings':
@@ -3180,6 +3302,41 @@ class Handler(BaseHTTPRequestHandler):
                         'fetchedAt': int(time.time()),
                         'today': today_row or {'date': today_str, 'used': 0, 'limit': 300}})
 
+        elif pt.startswith('/api/admin/usage/'):
+            # Where this app spent a merchant's quota, per day and per feature.
+            # Purely local bookkeeping — no Pospal query, so it costs nothing and
+            # the UI loads it on open instead of making an admin spend a call to
+            # see the split. Pospal only ever reports a day's total, so the
+            # difference between that total and the sum here is what the UI
+            # labels "Unattributed".
+            if not self._admin_auth():
+                self._json({'ok': False, 'error': 'Unauthorized'}, 401); return
+            mid = pt[len('/api/admin/usage/'):]
+            if not get_merchant(mid):
+                self._json({'ok': False, 'error': 'Merchant not found'}, 404); return
+            # Copied inside the lock, two levels deep: _count_call mutates the
+            # inner per-feature dicts, and serialising one while it grows raises.
+            with _sync_state_lock:
+                src  = (_sync_state_mem.get(mid) or {}).get('api_usage') or {}
+                days = {d: dict(f) for d, f in src.items()}
+            self._json({'ok': True, 'features': API_FEATURES, 'days': days})
+
+        elif pt.startswith('/api/admin/api-log/'):
+            # Every individual call logged for one merchant on one day. Reads a
+            # file this app wrote itself, so like the breakdown it costs nothing.
+            if not self._admin_auth():
+                self._json({'ok': False, 'error': 'Unauthorized'}, 401); return
+            mid = pt[len('/api/admin/api-log/'):]
+            if not get_merchant(mid):
+                self._json({'ok': False, 'error': 'Merchant not found'}, 404); return
+            day = (qs.get('date', [''])[0] or '').strip() or str(date.today())
+            try:
+                date.fromisoformat(day)
+            except ValueError:
+                self._json({'ok': False, 'error': 'Bad date'}, 400); return
+            self._json({'ok': True, 'day': day, 'features': API_FEATURES,
+                        'calls': read_api_log(mid, day)})
+
         elif pt == '/api/admin/merchant-stats':
             # Activity status + current-month sales for all merchants (disk-cached 5 min)
             if not self._admin_auth():
@@ -3268,12 +3425,14 @@ class Handler(BaseHTTPRequestHandler):
             if not m:
                 self._json({'ok': False, 'error': 'Not found'}, 404); return
             try:
-                _count_call(mid)
+                _count_call(mid, 'pay')
                 res  = pospal_post(m['appId'], m['appKey'], PAY_METHOD_PATH,
                                    {'appId': m['appId']}, host=m.get('host'))
                 raw  = res.get('data') or []
+                _api_log(mid, 'pay', True, f'admin lookup · {len(raw)} pay methods')
                 self._json({'ok': True, 'raw': raw, 'resolved': fetch_pay_methods(m)})
             except Exception as ex:
+                _api_log(mid, 'pay', False, f'admin lookup · {ex}')
                 self._json({'ok': False, 'error': str(ex)})
 
         # ── Admin login ────────────────────────────────────────────────────────

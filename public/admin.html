@@ -100,6 +100,35 @@ td.mono{font-family:monospace;font-size:12px;color:var(--gy)}
 .qd-line.qd-mine>span:last-child{color:var(--or);font-weight:700}
 .qd-tag{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:9px;font-weight:700;letter-spacing:.4px;margin-left:7px;white-space:nowrap}
 .qd-tag.qd-ext{color:var(--re)}
+.qd-head{font-size:9px;font-weight:700;letter-spacing:.5px;color:#a1a1aa;text-transform:uppercase;padding:2px 0 3px}
+.qd-head.qd-head2{border-top:1px solid var(--bd);margin-top:7px;padding-top:8px}
+.qd-feat{color:var(--dk);font-weight:500}
+.qd-line.qd-una .qd-feat{color:#92400e}
+.qd-line.qd-una>span:last-child{color:#92400e}
+.qd-why{font-size:10px;color:#a1a1aa;line-height:1.5;padding:3px 0 1px}
+.qd-line.qd-open{cursor:pointer;border-radius:4px;margin:0 -5px;padding-left:5px;padding-right:5px}
+.qd-line.qd-open:hover{background:#f0f0f2}
+.qd-line.qd-open .qd-feat::after{content:'›';color:#c4c4c8;font-weight:700;margin-left:6px}
+.qd-seeall{font-size:10.5px;color:var(--or);font-weight:600;cursor:pointer;padding:6px 0 1px;display:inline-block}
+.qd-seeall:hover{text-decoration:underline}
+/* ── API call log modal ─────────────────────────────────────────────────── */
+.al-sub{font-size:11.5px;color:var(--gy);font-weight:500;margin-top:3px}
+.al-chips{display:flex;flex-wrap:wrap;gap:6px;padding:14px 22px 0}
+.al-chip{font-size:11px;font-weight:600;color:var(--gy);background:var(--wh);border:1px solid var(--bd);
+         border-radius:14px;padding:4px 11px;cursor:pointer;white-space:nowrap}
+.al-chip:hover{border-color:#c4c4c8;color:var(--dk)}
+.al-chip.on{background:var(--dk);border-color:var(--dk);color:var(--wh)}
+.al-chip b{font-weight:700;margin-left:4px;opacity:.65}
+.al-body{padding:12px 22px 22px;max-height:58vh;overflow-y:auto}
+.al-row{display:flex;gap:11px;align-items:baseline;font-size:11.5px;padding:7px 0;border-top:1px solid #f1f1f3}
+.al-row:first-child{border-top:none}
+.al-time{font-family:'Menlo','Consolas',monospace;font-size:11px;color:#a1a1aa;flex-shrink:0;width:52px}
+.al-feat{font-weight:600;color:var(--dk);flex-shrink:0;width:112px}
+.al-what{color:var(--gy);word-break:break-word;line-height:1.5}
+.al-row.al-bad .al-feat{color:var(--re)}
+.al-row.al-bad .al-what{color:var(--re)}
+.al-row.al-bad .al-what::before{content:'✕ ';font-weight:700}
+.al-empty{font-size:12px;color:var(--gy);line-height:1.65;padding:14px 0}
 .qtag{display:inline-block;font-size:9.5px;font-weight:700;color:var(--or);border:1px solid var(--or);border-radius:3px;padding:0 4px;margin-left:7px;vertical-align:1px;letter-spacing:.3px}
 
 input.search{border:1px solid var(--bd);border-radius:6px;padding:7px 12px;font-size:13px;outline:none;width:220px}
@@ -426,6 +455,20 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
 </div>
 
 <!-- ── Reset Password Modal ──────────────────────────────────────────────── -->
+<div class="overlay" id="alogModal" onclick="if(event.target===this)closeApiLog()">
+  <div class="modal" style="width:620px">
+    <div class="modal-head">
+      <div>
+        <h3>API Call Log</h3>
+        <div class="al-sub" id="alogSub"></div>
+      </div>
+      <button class="modal-close" onclick="closeApiLog()">×</button>
+    </div>
+    <div class="al-chips" id="alogChips"></div>
+    <div class="al-body" id="alogBody"></div>
+  </div>
+</div>
+
 <div class="overlay" id="clModal" onclick="if(event.target===this)closeChangelog()">
   <div class="modal" style="width:560px">
     <div class="modal-head">
@@ -531,7 +574,7 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
 
 <div class="toast" id="toast"></div>
 
-<script src="/invoice-template.js?v=10"></script>
+<script src="/invoice-template.js?v=11"></script>
 <script>
 // ── Stale session → out ─────────────────────────────────────────────────
 // Admin sessions live in the server's memory too, so a restart invalidates the
@@ -892,6 +935,23 @@ function saveQuotaLogs() {
   try { localStorage.setItem(QUOTA_CACHE_KEY, JSON.stringify(quotaLogs)); } catch (e) { /* storage full */ }
 }
 
+// The per-feature split of the merchant currently open in the modal. This is
+// our own bookkeeping rather than a Pospal query, so fetching it is free and it
+// loads on open — only the Pospal figures it gets compared against cost a call.
+// Not cached in localStorage: it changes as the day goes on and refetching is
+// cheaper than reasoning about a stale copy.
+let usageDays = {}, usageFeatures = {};
+
+async function loadUsageBreakdown(id) {
+  usageDays = {}; usageFeatures = {};
+  if (!id) return;
+  try {
+    const r = await fetch(`/api/admin/usage/${id}`, {headers: authHeaders()});
+    const d = await r.json();
+    if (d.ok) { usageDays = d.days || {}; usageFeatures = d.features || {}; }
+  } catch (e) { /* optional — the quota log still renders without it */ }
+}
+
 const Q_DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const Q_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -916,28 +976,148 @@ function quotaClock(ts) {
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-// Per-day breakdown: ours vs each of the merchant's other appIds. The data
-// already came back in the same response, so opening this costs nothing.
-// appIds are shown in full — 32 hex chars fit the 480px modal with room to
-// spare, and a truncated id is useless for identifying which app it is.
+// Per-day breakdown, in two parts: what this app spent the day's quota on, and
+// which other applications on the merchant spent the rest. Both datasets are
+// already in hand when the row is drawn — the feature split is local
+// bookkeeping and the appId split came back with the quota log — so opening a
+// day costs nothing. appIds are shown in full: 32 hex chars fit the 480px modal
+// with room to spare, and a truncated id is useless for identifying an app.
 function quotaDetailRow(r, i, ourAppId) {
-  const others = (r.others || []).slice().sort((a, b) => b.used - a.used);
-  const lines  = [`<div class="qd-line qd-mine">`
-                + `<span class="qd-id">${esc(ourAppId || '—')}<span class="qd-tag">POSPAL REPORT</span></span>`
-                + `<span>${r.used}</span></div>`];
+  const lines = [];
+  const feat  = (usageDays[r.date] || null);
+
+  // ── Where our own calls went ────────────────────────────────────────────────
+  if (feat) {
+    const mine = Object.entries(feat)
+      .filter(([, n]) => n > 0)
+      .sort((a, b) => b[1] - a[1]);
+    const localSum = mine.reduce((s, [, n]) => s + n, 0);
+    lines.push(`<div class="qd-head">Where it went</div>`);
+    // Each feature opens the per-call log filtered to it — that is the only way
+    // to see when the calls went out and what each one came back with.
+    mine.forEach(([k, n]) => {
+      lines.push(`<div class="qd-line qd-open" onclick="openApiLog('${r.date}','${k}')">`
+               + `<span class="qd-feat">${esc(usageFeatures[k] || k)}</span>`
+               + `<span>${n}</span></div>`);
+    });
+    // Pospal counts a call when it answers; we count one when we send. The gap
+    // is anything on our appId this app did not make (the member portal shares
+    // it) plus whatever was in flight when the server last restarted.
+    const gap = r.used - localSum;
+    if (gap > 0) {
+      lines.push(`<div class="qd-line qd-una"><span class="qd-feat">Unattributed`
+               + `<span class="qd-tag qd-ext">OTHERS</span></span><span>${gap}</span></div>`);
+    }
+    lines.push(`<div class="qd-line qd-total"><span>Pospal counted</span>`
+             + `<span>${r.used}</span></div>`);
+    lines.push(`<span class="qd-seeall" onclick="openApiLog('${r.date}')">`
+             + `View all ${localSum} call${localSum === 1 ? '' : 's'} with timestamps →</span>`);
+    if (gap < 0) {
+      // Our tally is ahead of Pospal's: calls counted before a request that
+      // never landed (network error, Pospal-side rejection) read exactly so.
+      lines.push(`<div class="qd-why">${-gap} call${-gap > 1 ? 's were' : ' was'}`
+               + ` counted locally but never reached Pospal — most likely failed requests.</div>`);
+    }
+  } else {
+    lines.push(`<div class="qd-head">Where it went</div>`
+             + `<div class="qd-why">No local record for this day. The split is only`
+             + ` kept from the day this feature went live, and for the last 8 days.</div>`);
+  }
+
+  // ── Other applications on the same merchant ─────────────────────────────────
   // Sibling outlets of the same chain are filtered out server-side — they are
   // this project syncing other stores, not usage of THIS merchant. Only genuine
   // third-party applications reach here.
-  others.forEach(o => {
-    lines.push(`<div class="qd-line"><span class="qd-id">${esc(o.appId)}`
-             + `<span class="qd-tag qd-ext">EXTERNAL</span></span>`
-             + `<span>${o.used}</span></div>`);
-  });
-  lines.push(`<div class="qd-line qd-total">`
-           + `<span>This merchant + ${others.length} external</span>`
-           + `<span>${r.used + (r.otherUsed || 0)} / ${r.limit}</span></div>`);
+  const others = (r.others || []).slice().sort((a, b) => b.used - a.used);
+  if (others.length) {
+    lines.push(`<div class="qd-head qd-head2">Other apps on this merchant</div>`);
+    lines.push(`<div class="qd-line qd-mine">`
+             + `<span class="qd-id">${esc(ourAppId || '—')}<span class="qd-tag">POSPAL REPORT</span></span>`
+             + `<span>${r.used}</span></div>`);
+    others.forEach(o => {
+      lines.push(`<div class="qd-line"><span class="qd-id">${esc(o.appId)}`
+               + `<span class="qd-tag qd-ext">EXTERNAL</span></span>`
+               + `<span>${o.used}</span></div>`);
+    });
+    lines.push(`<div class="qd-line qd-total">`
+             + `<span>This merchant + ${others.length} external</span>`
+             + `<span>${r.used + (r.otherUsed || 0)} / ${r.limit}</span></div>`);
+  }
   return `<tr class="qdetail" id="qd-${i}" style="display:none">`
        + `<td colspan="4"><div class="qd-box">${lines.join('')}</div></td></tr>`;
+}
+
+// ── Per-call API log (modal) ──────────────────────────────────────────────────
+// The breakdown answers "how many calls"; this answers "when, and what came
+// back". Reading it is free — it is a file this app wrote itself while making
+// the calls — so it opens straight away with no warning about cost. It only
+// ever holds calls THIS app made: anything else sharing the merchant's App ID
+// lands in Pospal's count and shows up as Unattributed, never here.
+let alogState = {mid: '', day: '', calls: [], features: {}, filter: null};
+
+function alogClock(t) {
+  const d = new Date(t * 1000);
+  return [d.getHours(), d.getMinutes(), d.getSeconds()]
+    .map(n => String(n).padStart(2, '0')).join(':');
+}
+
+async function openApiLog(day, feature) {
+  const mid = document.getElementById('editId').value;
+  if (!mid) return;
+  alogState = {mid, day, calls: [], features: usageFeatures, filter: feature || null};
+  const dd = fmtQuotaDay(day);
+  document.getElementById('alogSub').textContent =
+    `${document.getElementById('fName').value || 'Merchant'} · ${dd.dow} ${dd.label}`;
+  document.getElementById('alogChips').innerHTML = '';
+  document.getElementById('alogBody').innerHTML  = '<div class="al-empty">Loading…</div>';
+  document.getElementById('alogModal').classList.add('show');
+  try {
+    const r = await fetch(`/api/admin/api-log/${mid}?date=${encodeURIComponent(day)}`,
+                          {headers: authHeaders()});
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Failed');
+    alogState.calls    = d.calls || [];
+    alogState.features = d.features || usageFeatures;
+  } catch (e) {
+    document.getElementById('alogBody').innerHTML =
+      `<div class="al-empty">Could not load the log: ${esc(e.message)}</div>`;
+    return;
+  }
+  renderApiLog();
+}
+
+function closeApiLog() { document.getElementById('alogModal').classList.remove('show'); }
+function alogFilter(f) { alogState.filter = f; renderApiLog(); }
+
+function renderApiLog() {
+  const {calls, features, filter} = alogState;
+  const counts = {};
+  calls.forEach(c => { counts[c.f] = (counts[c.f] || 0) + 1; });
+
+  const chips = [`<span class="al-chip${filter ? '' : ' on'}" onclick="alogFilter(null)">`
+               + `All<b>${calls.length}</b></span>`];
+  Object.keys(features).forEach(k => {
+    if (!counts[k]) return;
+    chips.push(`<span class="al-chip${filter === k ? ' on' : ''}" onclick="alogFilter('${k}')">`
+             + `${esc(features[k])}<b>${counts[k]}</b></span>`);
+  });
+  document.getElementById('alogChips').innerHTML = calls.length ? chips.join('') : '';
+
+  const shown = filter ? calls.filter(c => c.f === filter) : calls;
+  const body  = document.getElementById('alogBody');
+  if (!shown.length) {
+    body.innerHTML = calls.length
+      ? `<div class="al-empty">No ${esc(features[filter] || filter)} calls on this day.</div>`
+      : `<div class="al-empty">Nothing logged for this day.<br>Per-call logging only`
+      + ` covers calls this app made, from the day it went live onwards.</div>`;
+    return;
+  }
+  // Newest first: when something has just gone wrong, it is at the top.
+  body.innerHTML = shown.slice().reverse().map(c =>
+      `<div class="al-row${c.ok ? '' : ' al-bad'}">`
+    + `<span class="al-time">${alogClock(c.t)}</span>`
+    + `<span class="al-feat">${esc(features[c.f] || c.f)}</span>`
+    + `<span class="al-what">${esc(c.s || '—')}</span></div>`).join('');
 }
 
 function toggleQuotaDay(i) {
@@ -951,11 +1131,22 @@ function toggleQuotaDay(i) {
 
 function resetQuotaSection(mid) {
   const cached = mid ? quotaLogs[mid] : null;
-  if (cached) { renderQuotaLog(cached); return; }
-  document.getElementById('quotaIdle').style.display   = 'block';
-  document.getElementById('quotaResult').style.display = 'none';
-  document.getElementById('quotaErr').style.display    = 'none';
-  document.getElementById('quotaWhen').textContent     = '';
+  if (cached) {
+    renderQuotaLog(cached);
+  } else {
+    document.getElementById('quotaIdle').style.display   = 'block';
+    document.getElementById('quotaResult').style.display = 'none';
+    document.getElementById('quotaErr').style.display    = 'none';
+    document.getElementById('quotaWhen').textContent     = '';
+  }
+  // Free, so it is fetched on open rather than on Refresh. The cached log is
+  // drawn first and redrawn when this lands: the day rows need it to know
+  // whether they have anything to expand. The id is re-checked because an admin
+  // can close this merchant and open another before the response arrives.
+  loadUsageBreakdown(mid).then(() => {
+    const c = mid ? quotaLogs[mid] : null;
+    if (c && document.getElementById('editId').value === mid) renderQuotaLog(c);
+  });
 }
 
 function renderQuotaLog(p) {
@@ -980,17 +1171,20 @@ function renderQuotaLog(p) {
     const d       = fmtQuotaDay(r.date);
     const isToday = r.date === t.date;
     const total   = dayTotal(r);
-    const hasMore = (r.others || []).length > 0;
+    // "of N" only says something when another app contributed to N, but the
+    // chevron opens on any day we also hold a local feature split for.
+    const hasExt  = (r.others || []).length > 0;
+    const canOpen = hasExt || !!usageDays[r.date];
     const wMine   = r.used > 0 ? Math.max(3, Math.round(r.used / peak * 100)) : 0;
     const wOther  = (r.otherUsed || 0) > 0 ? Math.max(3, Math.round(r.otherUsed / peak * 100)) : 0;
-    const row = `<tr class="${isToday ? 'today' : ''}${hasMore ? ' qclick' : ''}"`
-              + `${hasMore ? ` onclick="toggleQuotaDay(${i})"` : ''}>`
+    const row = `<tr class="${isToday ? 'today' : ''}${canOpen ? ' qclick' : ''}"`
+              + `${canOpen ? ` onclick="toggleQuotaDay(${i})"` : ''}>`
               + `<td class="qdow">${d.dow}</td>`
               + `<td>${d.label}${isToday ? '<span class="qtag">TODAY</span>' : ''}`
-              + `${hasMore ? `<span class="qchev" id="qchev-${i}">▶</span>` : ''}</td>`
+              + `${canOpen ? `<span class="qchev" id="qchev-${i}">▶</span>` : ''}</td>`
               + `<td class="qbar"><span><i style="width:${wMine}%"></i><b style="width:${wOther}%"></b></span></td>`
-              + `<td class="quse">${r.used}${hasMore ? `<em> of ${total}</em>` : ''}</td></tr>`;
-    return row + (hasMore ? quotaDetailRow(r, i, p.appId) : '');
+              + `<td class="quse">${r.used}${hasExt ? `<em> of ${total}</em>` : ''}</td></tr>`;
+    return row + (canOpen ? quotaDetailRow(r, i, p.appId) : '');
   }).join('');
 
   const ourTotal = rows.reduce((s, r) => s + r.used, 0);
@@ -1032,6 +1226,9 @@ async function loadQuotaLog() {
                      fetchedAt   : d.fetchedAt || Math.floor(Date.now() / 1000)};
     quotaLogs[id] = payload;
     saveQuotaLogs();
+    // The call we just made is itself in the breakdown, so re-read it before
+    // drawing or today's row opens one short.
+    await loadUsageBreakdown(id);
     renderQuotaLog(payload);
   } catch (e) {
     err.textContent   = 'Quota check failed: ' + e.message;

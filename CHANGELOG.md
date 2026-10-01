@@ -2,6 +2,36 @@
 
 ---
 
+## v1.3.3 — 2026-10-01
+
+### New
+
+- **The admin console now shows where a merchant's API quota went.** Opening a
+  day in the 7-day quota log splits it by what spent it — Daily Sync, Report
+  Pages, Quota Checks, Payment Methods, Member Lookup — instead of just a total.
+  Anything Pospal counted that this app cannot account for (the member portal
+  shares the same App ID) shows as **Unattributed**, kept separate from the
+  existing per-App-ID list so the two kinds of "someone else" do not get mixed up.
+- **Every API call is now logged individually.** Clicking a feature, or "View
+  all calls with timestamps", opens the exact calls behind that number: the time
+  each went out and what came back — the page and ticket count for a ticket
+  query, the reading for a quota check, the member's name for a lookup. Failed
+  calls are listed in red with the reason. Covers calls this app made, kept for
+  8 days; reading any of it costs no API call.
+
+### Fixed
+
+- **The WhatsApp invoice link was unreadable on a phone.** The shared page
+  declared no viewport, so phones laid it out for a desktop and shrank the whole
+  invoice into a thumbnail at the top of the screen. It now fits the screen it is
+  opened on, while Print and Download PDF still produce the A4 layout.
+- `sync_state.json` was written in place, which truncates it to zero before
+  writing. It now carries the per-feature usage history as well, so an
+  interrupted write would have taken every merchant's sync position with it.
+  Written atomically now, the same way `merchants.json` already was.
+
+---
+
 ## v1.3.2 — 2026-10-01
 
 ### Fixed

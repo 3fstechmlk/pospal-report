@@ -452,6 +452,35 @@ thead th[data-el].el-sel{outline-color:#fff;box-shadow:inset 0 0 0 999px rgba(25
 
   // ── Page builder ────────────────────────────────────────────────────────────
   // t: ticket, s: invoice settings, opts: {autoprint, remark, member, PM, fallbackName, edit}
+  // The WhatsApp share link gets opened on a phone far more often than on a
+  // desktop, and this document is laid out for 680px.  Screen-only on purpose:
+  // printing keeps the desktop layout, and `.pdfing` — set on <body> only while
+  // html2pdf rasterises — pulls the few layout-defining rules back, so a phone
+  // still downloads an A4-shaped PDF rather than a tall narrow one.
+  const MOBILE_CSS = `
+@media screen and (max-width:600px){
+#inv-content{padding:14px 12px}
+.inv-hdr{flex-direction:column;gap:10px}
+.inv-title h1,.inv-title .inv-no,.inv-title .inv-date{text-align:left}
+.inv-title h1{font-size:21px}
+.co-name{font-size:16px}
+.co-info{font-size:11.5px;line-height:1.6}
+thead th{padding:6px 5px;font-size:9px;letter-spacing:.3px}
+thead th.r{width:auto!important}
+tbody td{padding:7px 5px;font-size:11.5px}
+tbody td.r{white-space:nowrap}
+.totals{width:100%}
+.pill{margin-bottom:5px}
+.dl-bar{position:sticky;top:0;z-index:20;padding:9px 12px}
+.dl-bar button{padding:9px 15px;font-size:13px}
+}
+.pdfing{width:680px!important;max-width:none!important}
+.pdfing #inv-content{padding:20px 28px!important}
+.pdfing .inv-hdr{flex-direction:row!important}
+.pdfing .inv-title h1{font-size:24px!important;text-align:right!important}
+.pdfing .inv-title .inv-no,.pdfing .inv-title .inv-date{text-align:right!important}
+.pdfing .totals{width:280px!important}`;
+
   function build(t, s, opts) {
     opts = opts || {};
     s    = s    || {};
@@ -463,10 +492,11 @@ thead th[data-el].el-sel{outline-color:#fff;box-shadow:inset 0 0 0 999px rgba(25
     ).join('');
 
     return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(c.title)} ${esc(t.sn || '')}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,Arial,sans-serif;font-size:13px;color:#18181b;background:#fff;padding:0;max-width:680px;margin:0 auto}
+body{font-family:-apple-system,Arial,sans-serif;font-size:13px;color:#18181b;background:#fff;padding:0;max-width:680px;margin:0 auto;-webkit-text-size-adjust:100%}
 #inv-content{padding:20px 28px}
 #inv-content>.blk{margin-bottom:14px}
 .inv-hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:2px solid ${c.accent}}
@@ -498,6 +528,7 @@ tbody td.r{text-align:right;font-family:monospace}
 .footer-note{text-align:center;font-size:11px;color:#a1a1aa;padding-top:12px;border-top:1px solid #e4e4e7}
 @media print{#inv-content{padding:12px}.dl-bar{display:none!important}}
 .dl-bar{display:flex;gap:8px;justify-content:flex-end;align-items:center;padding:10px 16px;background:#f4f4f5;border-bottom:1px solid #e4e4e7;flex-wrap:wrap}
+${opts.edit ? '' : MOBILE_CSS}
 </style></head><body>
 ${opts.edit ? '' : `<div class="dl-bar">
   <span style="flex:1;font-size:11px;color:#71717a;font-family:monospace">${esc(t.sn || '')}</span>
@@ -512,17 +543,17 @@ ${opts.edit ? editScript(c.accent, c.vars) : `<script src="https://cdnjs.cloudfl
 function downloadPdf(){
   var b=document.getElementById('dlBtn');
   b.disabled=true;b.textContent='Generating…';
+  var done=function(){document.body.classList.remove('pdfing');b.disabled=false;b.textContent='⬇ Download PDF'};
   var sn=${JSON.stringify(t.sn || 'invoice')};
   var filename=${JSON.stringify((c.title || 'INVOICE').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toUpperCase())}+'-'+sn.replace(/[^a-zA-Z0-9]/g,'-')+'.pdf';
+  document.body.classList.add('pdfing');
   html2pdf().set({
     margin:[10,10,10,10],
     filename:filename,
     image:{type:'jpeg',quality:0.98},
-    html2canvas:{scale:2,useCORS:true},
+    html2canvas:{scale:2,useCORS:true,windowWidth:720},
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
-  }).from(document.getElementById('inv-content')).save().then(function(){
-    b.disabled=false;b.textContent='⬇ Download PDF';
-  });
+  }).from(document.getElementById('inv-content')).save().then(done,done);
 }
 <\/script>`}
 ${!opts.edit && opts.autoprint ? `<script>window.onload=function(){window.print()}<\/script>` : ''}
