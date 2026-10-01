@@ -2,6 +2,19 @@
 
 ---
 
+## v1.3.2 — 2026-10-01
+
+### Fixed
+
+- **The remarks never showed on a printed invoice.** v1.3.0 added Pospal's product
+  and transaction remarks to the invoice, but the pages still asked for
+  `invoice-template.js?v=9` while the file itself had changed — so browsers kept
+  serving the cached copy without them. The expanded detail and the Excel export
+  were unaffected (one is inline in the page, the other is built server-side);
+  only Print / PDF was missing them. Bumped to `?v=10`.
+
+---
+
 ## v1.3.1 — 2026-10-01
 
 ### Fixed

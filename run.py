@@ -17,7 +17,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 
-VERSION  = '1.3.1'
+VERSION  = '1.3.2'
 SSL_CTX  = ssl._create_unverified_context()
 PORT     = int(os.environ.get('PORT') or 8080)   # env override so a local copy can run beside 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

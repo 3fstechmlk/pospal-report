@@ -36,6 +36,15 @@
 
 - `python -m py_compile run.py`
 - 改过的每个页面：抽出 `<script>` 跑 `node --check`
+- **改了 `public/` 下任何带 `?v=` 的 js/css，必须同步 bump 所有引用它的页面**。
+  HTML 响应带 `no-store` 每次都是新的，但这些静态资源靠 URL 上的 `?v=` 区分版本 ——
+  版本号不变，浏览器就一直用缓存里的旧文件，代码部署了也等于没上线。
+  v1.3.0 的发票备注就是这么"部署成功但看不到"的：`invoice-template.js` 改了，
+  引用还停在 `?v=9`。
+  一条命令对一遍引用的版本号和文件 mtime：
+  ```bash
+  grep -ho '/[a-z-]*\.\(js\|css\)?v=[0-9]*' public/*.html | sort -u; ls -l --time-style=long-iso public/*.js public/*.css
+  ```
 - 能在本地起服务就起（`preview_start`，端口 8081），实际点一遍改动的地方
 
 ### Step 4 — Push 到 GitHub（**部署前必须完成**）
