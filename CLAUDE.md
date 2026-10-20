@@ -86,7 +86,7 @@ ssh -i "/c/Users/JONA TAI/.ssh/id_ed25519" -o StrictHostKeyChecking=no root@5.22
 **5.2 打包**
 
 ```bash
-cd "/c/project/pospal-report" && tar -czf /tmp/pospal_deploy.tar.gz --exclude='./data' --exclude='./cache' --exclude='./ssh' --exclude='./.git' --exclude='./.claude' --exclude='./pospal-report' --exclude='./__pycache__' --exclude='*.pyc' --exclude='./.DS_Store' --exclude='./node_modules' --exclude='./legacy' .
+cd "/c/project/pospal-report" && tar -czf /tmp/pospal_deploy.tar.gz --exclude='./data' --exclude='./cache' --exclude='./ssh' --exclude='./.git' --exclude='./.claude' --exclude='./pospal-report' --exclude='./__pycache__' --exclude='*.pyc' --exclude='./.DS_Store' --exclude='./node_modules' --exclude='./legacy' --exclude='./.agents' .
 ```
 
 **5.3 上传**

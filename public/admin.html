@@ -70,6 +70,15 @@ td.mono{font-family:monospace;font-size:12px;color:var(--gy)}
 .btn-mini{background:none;border:1px solid var(--bd);border-radius:6px;color:var(--gy);font-size:11px;font-weight:600;padding:4px 10px;cursor:pointer;transition:color .15s,border-color .15s}
 .btn-mini:hover{color:var(--dk);border-color:#a1a1aa}
 .btn-mini:disabled{opacity:.5;cursor:not-allowed}
+/* App Key field: full width like App ID, eye toggle sits inside it on the right */
+.key-wrap{position:relative}
+.form-row .key-wrap input{padding-right:38px}
+.key-wrap .key-eye{position:absolute;top:50%;right:5px;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;padding:5px;border:none;border-radius:4px;background:none;color:var(--gy);cursor:pointer;transition:color .15s,background .15s}
+.key-wrap .key-eye:hover{color:var(--dk);background:var(--bg)}
+.key-wrap .key-eye:focus-visible{outline:2px solid var(--or);outline-offset:1px}
+.key-wrap .key-eye[hidden]{display:none}
+.key-wrap .key-eye:disabled{opacity:.5;cursor:not-allowed}
+.key-wrap .key-eye svg{width:16px;height:16px;display:block}
 .quota-idle{font-size:11.5px;color:var(--gy);line-height:1.6}
 .quota-now{font-size:22px;font-weight:700;letter-spacing:-.5px}
 .quota-now small{font-size:11px;font-weight:600;color:var(--gy);margin-left:8px;letter-spacing:0}
@@ -394,7 +403,13 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
       </div>
       <div class="form-row">
         <label>Pospal App Key</label>
-        <input type="text" id="fAppKey" class="mono" placeholder="numeric key">
+        <div class="key-wrap">
+          <input type="text" id="fAppKey" class="mono" placeholder="numeric key">
+          <!-- Edit mode + merchant has a key only. The key is fetched on click,
+               never sent with the merchant list. -->
+          <button type="button" class="key-eye" id="bKeyReveal" onclick="toggleAppKey()" hidden
+                  title="Show App Key" aria-label="Show App Key" aria-pressed="false"></button>
+        </div>
       </div>
       <div class="form-row" id="pwRow">
         <label>Default Password</label>
@@ -888,6 +903,7 @@ function openAdd() {
   document.getElementById('modalTitle').textContent = 'Add Merchant';
   document.getElementById('modalErr').style.display = 'none';
   document.getElementById('quotaWrap').style.display = 'none';
+  resetAppKeyReveal(false);
   openModal();
   setTimeout(() => document.getElementById('tplPaste').focus(), 80);
 }
@@ -903,6 +919,7 @@ function openEdit(id) {
   document.getElementById('fAppKey').value  = '';
   document.getElementById('fAppKey').placeholder = m.hasAppKey ? 'Leave blank to keep existing key' : '⚠ No App Key set — enter it now';
   document.getElementById('fAppKey').style.borderColor = m.hasAppKey ? '' : '#dc2626';
+  resetAppKeyReveal(m.hasAppKey);
   document.getElementById('pasteSection').style.display = 'none';
   document.getElementById('pwRow').style.display = 'none';
   document.getElementById('modalTitle').textContent = 'Edit Merchant';
@@ -1245,7 +1262,66 @@ function openModal() {
   if (modal) modal.scrollTop = 0;
 }
 
-function closeModal() { document.getElementById('editModal').classList.remove('show'); }
+function closeModal() {
+  document.getElementById('editModal').classList.remove('show');
+  resetAppKeyReveal(false);
+}
+
+// ── App Key reveal (Edit Merchant modal) ──────────────────────────────────────
+// The merchants list only carries hasAppKey. Show fetches this one merchant's
+// key and puts it in the field — saving it back unchanged just rewrites the same
+// key. Hide, closing the modal, or opening another merchant clears the field
+// again (empty = keep existing key).
+let keyShown = false;
+let keyReq   = 0;   // bumped on every reset so a late response can't land in another merchant
+
+// Eye = key hidden, click to show. Eye-off = key shown, click to hide.
+const ICON_EYE     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const ICON_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 8 10 8a17.6 17.6 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M17.94 17.94A10.1 10.1 0 0 1 12 20c-6.5 0-10-8-10-8a17.9 17.9 0 0 1 4.06-5.94"/><line x1="2" y1="2" x2="22" y2="22"/></svg>';
+
+function setKeyBtn(btn, shown) {
+  const label = shown ? 'Hide App Key' : 'Show App Key';
+  btn.innerHTML = shown ? ICON_EYE_OFF : ICON_EYE;
+  btn.title = label;
+  btn.setAttribute('aria-label', label);
+  btn.setAttribute('aria-pressed', shown ? 'true' : 'false');
+}
+
+function resetAppKeyReveal(hasKey) {
+  keyReq++;
+  if (keyShown) document.getElementById('fAppKey').value = '';
+  keyShown = false;
+  const btn = document.getElementById('bKeyReveal');
+  btn.hidden = !hasKey; btn.disabled = false; btn.removeAttribute('aria-busy'); setKeyBtn(btn, false);
+}
+
+async function toggleAppKey() {
+  const input = document.getElementById('fAppKey');
+  const btn   = document.getElementById('bKeyReveal');
+  if (keyShown) {
+    input.value = ''; keyShown = false; setKeyBtn(btn, false);
+    return;
+  }
+  const id = document.getElementById('editId').value;
+  if (!id) return;
+  const req = ++keyReq;
+  btn.disabled = true; btn.title = 'Loading…'; btn.setAttribute('aria-busy', 'true');
+  try {
+    const r = await fetch(`/api/admin/merchants/${encodeURIComponent(id)}/appkey`,
+                          {headers: authHeaders(), cache: 'no-store'});
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Failed');
+    if (req !== keyReq) return;          // modal closed / other merchant opened meanwhile
+    input.value = d.appKey || '';
+    keyShown = true; setKeyBtn(btn, true);
+  } catch (e) {
+    if (req !== keyReq) return;
+    setKeyBtn(btn, false);
+    showToast('Could not load App Key: ' + e.message);
+  } finally {
+    if (req === keyReq) { btn.disabled = false; btn.removeAttribute('aria-busy'); }
+  }
+}
 
 async function doSave() {
   const id         = document.getElementById('editId').value;
@@ -1454,6 +1530,7 @@ function openSetupPending(name, account, wf_id) {
   document.getElementById('pwRow').style.display      = '';
   document.getElementById('modalTitle').textContent   = 'Setup Merchant';
   document.getElementById('modalErr').style.display   = 'none';
+  resetAppKeyReveal(false);
   openModal();
   setTimeout(() => document.getElementById('fAppId').focus(), 80);
 }

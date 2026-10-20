@@ -119,6 +119,7 @@ Click **Edit** on the relevant row.
 
 - You can update Company Name, Username, App ID, and Day Start Hour.
 - **App Key:** Leave blank to keep the existing key. Only fill in if you are updating or adding a missing key.
+  To see the current key, click the **eye icon** next to the field (only appears if the merchant has a key); click it again (eye with a slash) to hide the key. Saving with the shown key unchanged keeps the same key.
 - **Password is not shown here** — use the **PW** button to reset it separately.
 - If you see a yellow warning ("⚠ This merchant has no App Key"), enter the App Key immediately so API sync can work.
 

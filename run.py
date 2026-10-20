@@ -17,7 +17,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 
-VERSION  = '1.3.3'
+VERSION  = '1.3.4'
 SSL_CTX  = ssl._create_unverified_context()
 PORT     = int(os.environ.get('PORT') or 8080)   # env override so a local copy can run beside 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -2558,12 +2558,14 @@ class Handler(BaseHTTPRequestHandler):
     def _merch_auth(self):
         return check_merch_session(self._bearer())  # returns mid or None
 
-    def _json(self, data, code=200):
+    def _json(self, data, code=200, no_store=False):
         body = json.dumps(data, ensure_ascii=False).encode()
         self.send_response(code)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-Length', len(body))
+        if no_store:
+            self.send_header('Cache-Control', 'no-store')
         self.end_headers()
         self.wfile.write(body)
 
@@ -3152,6 +3154,19 @@ class Handler(BaseHTTPRequestHandler):
                      'member_portal': bool(m.get('member_portal', False)),
                      'join_member': bool(m.get('join_member', False))} for m in ms]
             self._json({'ok': True, 'merchants': safe})
+
+        elif pt.startswith('/api/admin/merchants/') and pt.endswith('/appkey'):
+            # ONE merchant's App Key, for the Edit modal's Show button. The list
+            # above never carries keys; the admin page only fetches this when
+            # the Show button is clicked.
+            if not self._admin_auth():
+                self._json({'ok': False, 'error': 'Unauthorized'}, 401); return
+            mid      = pt[len('/api/admin/merchants/'):-len('/appkey')]
+            merchant = get_merchant_by_id(mid)
+            if not merchant:
+                self._json({'ok': False, 'error': 'Merchant not found'}, 404); return
+            print(f'  [admin] app key revealed for merchant {mid}')   # id only, never the key
+            self._json({'ok': True, 'appKey': merchant.get('appKey') or ''}, no_store=True)
 
         elif pt == '/api/admin/invoice-settings':
             if not self._admin_auth():

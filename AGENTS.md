@@ -16,7 +16,7 @@ Workflow project: tar → scp → extract + restart).
 
 **Step 1 — Package project (excluding runtime data and local-only files)**
 ```bash
-cd "/c/project/pospal-report" && tar -czf /tmp/pospal_deploy.tar.gz --exclude='./data' --exclude='./cache' --exclude='./ssh' --exclude='./.git' --exclude='./.Codex' --exclude='./pospal-report' --exclude='./__pycache__' --exclude='*.pyc' --exclude='./.DS_Store' --exclude='./node_modules' --exclude='./legacy' .
+cd "/c/project/pospal-report" && tar -czf /tmp/pospal_deploy.tar.gz --exclude='./data' --exclude='./cache' --exclude='./ssh' --exclude='./.git' --exclude='./.Codex' --exclude='./pospal-report' --exclude='./__pycache__' --exclude='*.pyc' --exclude='./.DS_Store' --exclude='./node_modules' --exclude='./legacy' --exclude='./.agents' .
 ```
 
 **Step 2 — Upload to server**

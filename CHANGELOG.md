@@ -2,6 +2,25 @@
 
 ---
 
+## v1.3.4 — 2026-10-20
+
+### New
+
+- **You can now view a merchant's App Key from Edit Merchant.** The App Key
+  field has an eye icon on its right. Click it to show the current key, click it
+  again to hide it. The key is only fetched from the server when you click, and
+  it is cleared again when you hide it, close the window, or open another
+  merchant. Leaving the field blank still keeps the existing key, and merchants
+  without a key show no eye icon.
+
+### Security
+
+- The merchant list still never carries App Keys. Showing a key goes through its
+  own admin-only request that the browser is told not to cache, and the server
+  log records which merchant's key was viewed (never the key itself).
+
+---
+
 ## v1.3.3 — 2026-10-01
 
 ### New
