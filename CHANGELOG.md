@@ -2,6 +2,23 @@
 
 ---
 
+## v1.3.5 — 2026-10-22
+
+### New
+
+- **Add Merchant reads Pospal's new credential format.** Pospal now issues
+  credentials as two lines, `appId=...` and `appKey=...`. Paste them into the
+  template box and the App ID and App Key fields fill in by themselves. The older
+  template is still accepted. The field hints now describe the new format: a
+  16-character App ID and a 32-character App Key.
+
+### Fixed
+
+- The "✓ Credentials parsed successfully" line never appeared after pasting a
+  template. It now shows once the credentials are read.
+
+---
+
 ## v1.3.4 — 2026-10-20
 
 ### New

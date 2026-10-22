@@ -382,8 +382,8 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
       <div id="pasteSection">
         <div class="form-row">
           <label>Paste Pospal Credentials Template</label>
-          <textarea id="tplPaste" placeholder="Paste the ====appId appKey==== block here…" oninput="parseTemplate()"></textarea>
-          <div class="parse-hint">Auto-fills fields below when detected</div>
+          <textarea id="tplPaste" placeholder="appId=xxxxxxxxxxxxxxxx&#10;appKey=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" oninput="parseTemplate()"></textarea>
+          <div class="parse-hint">Paste the appId= / appKey= lines from Pospal. Auto-fills App ID and App Key below.</div>
           <div class="parsed-ok" id="parsedOk">✓ Credentials parsed successfully</div>
         </div>
         <div class="section-div"><span>Or fill in manually</span></div>
@@ -399,12 +399,12 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
       </div>
       <div class="form-row">
         <label>Pospal App ID</label>
-        <input type="text" id="fAppId" class="mono" placeholder="32-character hex string">
+        <input type="text" id="fAppId" class="mono" placeholder="16-character code, e.g. pjsdl7gykv5pczvh">
       </div>
       <div class="form-row">
         <label>Pospal App Key</label>
         <div class="key-wrap">
-          <input type="text" id="fAppKey" class="mono" placeholder="numeric key">
+          <input type="text" id="fAppKey" class="mono" placeholder="32-character key">
           <!-- Edit mode + merchant has a key only. The key is fetched on click,
                never sent with the merchant list. -->
           <button type="button" class="key-eye" id="bKeyReveal" onclick="toggleAppKey()" hidden
@@ -867,9 +867,15 @@ function renderTable() {
 
 // ── Add / Edit ─────────────────────────────────────────────────────────────────
 // ── Template parser ────────────────────────────────────────────────────────────
+// Pospal now issues credentials as "appId=..." / "appKey=..." lines. The older
+// "key: value" template is still accepted. A value may not start with "=", so
+// a "====appId appKey====" header line is never read as a value.
 function parseTemplate() {
   const text = document.getElementById('tplPaste').value;
-  const get  = key => { const m = text.match(new RegExp(key + '\\s*:\\s*(.+)', 'i')); return m ? m[1].trim() : ''; };
+  const get  = key => {
+    const m = text.match(new RegExp('(?<![A-Za-z])' + key + '\\s*[:=：]\\s*([^\\s=][^\\r\\n]*)', 'i'));
+    return m ? m[1].trim() : '';
+  };
   const account = get('account');
   const name    = get('company');
   const appId   = get('appID');
@@ -880,7 +886,7 @@ function parseTemplate() {
     if (name)    document.getElementById('fName').value    = name;
     if (appId)   document.getElementById('fAppId').value   = appId;
     if (appKey)  document.getElementById('fAppKey').value  = appKey;
-    document.getElementById('parsedOk').style.display = '';
+    document.getElementById('parsedOk').style.display = 'block';
   } else {
     document.getElementById('parsedOk').style.display = 'none';
   }
@@ -894,7 +900,7 @@ function openAdd() {
   document.getElementById('fAccount').value  = '';
   document.getElementById('fAppId').value    = '';
   document.getElementById('fAppKey').value   = '';
-  document.getElementById('fAppKey').placeholder = 'numeric key';
+  document.getElementById('fAppKey').placeholder = '32-character key';
   document.getElementById('fPw').value       = '123456';
   document.getElementById('fDayStart').value = '6';
   document.getElementById('parsedOk').style.display = 'none';
@@ -1522,7 +1528,7 @@ function openSetupPending(name, account, wf_id) {
   document.getElementById('fAccount').value    = account;
   document.getElementById('fAppId').value      = '';
   document.getElementById('fAppKey').value     = '';
-  document.getElementById('fAppKey').placeholder = 'numeric key';
+  document.getElementById('fAppKey').placeholder = '32-character key';
   document.getElementById('fPw').value         = '123456';
   document.getElementById('fDayStart').value   = '6';
   document.getElementById('parsedOk').style.display  = 'none';
