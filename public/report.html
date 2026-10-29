@@ -156,6 +156,114 @@ td:nth-child(2){text-align:center;font-weight:500}
 .si-field input{width:100%;border:1px solid var(--bd);border-radius:6px;padding:8px 10px;font-size:13px;outline:none}
 .si-field input:focus{border-color:var(--or);box-shadow:0 0 0 2px rgba(255,102,0,.15)}
 .si-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+
+/* ── Member QR modal: Homepage Ads block ── */
+.mq-modal{max-width:calc(100vw - 24px);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;box-sizing:border-box}
+.mqa{margin-top:16px;padding-top:12px;border-top:1px solid var(--bd);text-align:left}
+.mqa-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.mqa-title{margin:0;font-size:14px;color:var(--dk)}
+.mqa-count{font-size:12px;color:var(--gy)}
+.mq-modal .mqa-hint{margin:4px 0 8px;font-size:11px;line-height:1.5;color:var(--gy);overflow-wrap:anywhere}
+.mqa-list{list-style:none;margin:0;padding:0}
+.mqa-item{display:grid;grid-template-columns:44px 96px minmax(0,1fr);grid-template-areas:"handle thumb actions" "handle link link";gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--bd);position:relative;background:var(--wh)}
+/* Drag handle: the only place that blocks touch scrolling, so swiping anywhere else still scrolls the modal */
+.mqa-handle{grid-area:handle;align-self:stretch;display:flex;align-items:center;justify-content:center;width:44px;min-height:44px;padding:0;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--gy);font-size:16px;line-height:1;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.mqa-handle:hover:not(:disabled):not([aria-disabled="true"]){border-color:#aaa;color:var(--dk)}
+.mqa-handle:focus-visible{outline:2px solid var(--or);outline-offset:1px}
+.mqa-handle:disabled,.mqa-handle[aria-disabled="true"]{opacity:.4;cursor:not-allowed}
+.mqa-sorting{user-select:none;-webkit-user-select:none;cursor:grabbing}
+.mqa-sorting .mqa-handle{cursor:grabbing}
+.mqa-sorting .mqa-item{transition:transform .15s ease}
+.mqa-item.mqa-dragging{z-index:2;transition:none;transform:translateY(var(--mqa-dy,0px));box-shadow:0 8px 24px rgba(0,0,0,.18);opacity:.95;border-radius:6px}
+.mqa-shift-up{transform:translateY(calc(-1 * var(--mqa-h,0px)))}
+.mqa-shift-down{transform:translateY(var(--mqa-h,0px))}
+@media (prefers-reduced-motion:reduce){
+.mqa-sorting .mqa-item{transition:none}
+}
+.mqa-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* Thumbnail shows the whole image at its real ratio, fitted inside a 96×96 box (16:9 → 96×54, 1:1 → 96×96, 9:16 → 54×96) */
+.mqa-thumb{grid-area:thumb;width:96px;height:96px;display:flex;align-items:center;justify-content:center}
+.mqa-thumb img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;border-radius:6px;background:#fff7ed}
+.mqa-thumb img:not([src]){visibility:hidden}
+.mqa-actions{grid-area:actions;display:flex;align-items:center;gap:4px}
+.mqa-pos{font-size:12px;color:var(--gy);margin-right:auto}
+.mqa-icon{width:32px;height:32px;padding:0;border:1px solid var(--bd);border-radius:6px;background:var(--wh);cursor:pointer;font-size:14px;line-height:1}
+.mqa-icon:disabled{opacity:.4;cursor:not-allowed}
+.mqa-del{color:var(--re)}
+.mqa-link{grid-area:link;display:flex;gap:6px}
+.mq-modal .mqa-link input{flex:1;min-width:0;width:auto;margin-bottom:0;font-size:16px}
+.mqa-save{flex:0 0 auto;padding:6px 10px}
+.mqa-msg{min-height:18px;margin:6px 0;font-size:12px;color:var(--dk)}
+.mqa-msg.mqa-err{color:var(--re)}
+.mqa-file{display:none}
+.mqa-add{width:100%;margin-bottom:16px}
+.mqa-state{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;font-size:12px;color:var(--gy);overflow-wrap:anywhere}
+.mqa-state .btn{padding:6px 12px;font-size:12px}
+/* Member QR modal: .mq-shell is the rounded white card (clips the scrollbar so all four corners stay
+   round) and holds the close X; .mq-modal inside it is still the scroll container (drag auto-scroll uses it).
+   460px single column; on wide screens QR on the left (stays in view while scrolling), ads on the right. */
+.mq-shell{position:relative;width:460px;max-width:calc(100vw - 24px);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);display:flex;flex-direction:column;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.mq-shell > .mq-modal{width:100%;max-width:none;max-height:none;flex:1 1 auto;min-height:0;border-radius:0;box-shadow:none}
+/* Close: dark bold icon on a filled grey circle, so it reads as "close the window" and not like the red per-ad delete ✕ */
+.mq-x{position:absolute;top:10px;right:22px;z-index:3;display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:#ececec;color:#111;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:background .15s,color .15s}
+.mq-x svg{display:block}
+.mq-x:hover{background:#111;color:#fff}
+@media (prefers-reduced-motion:reduce){.mq-x{transition:none}}
+.mq-x:focus-visible{outline:2px solid var(--or);outline-offset:1px}
+.mq-qr > h3{padding-right:52px}
+.mq-dl{display:flex;justify-content:center;margin-bottom:8px}
+.mq-dl-btn{padding:8px 20px;font-size:13px}
+@media (min-width:860px){
+.mq-shell{width:min(1120px,calc(100vw - 64px));max-height:calc(100vh - 48px);max-height:calc(100dvh - 48px)}
+.mq-x{top:16px;right:28px}
+.mq-qr > h3{padding-right:0}
+.mq-modal .mqa-head{padding-right:56px}
+.mq-dl-btn{padding:10px 28px;font-size:14px}
+.mq-modal{padding:32px 36px !important;display:grid;grid-template-columns:360px minmax(0,1fr);align-items:start;column-gap:36px}
+.mq-modal > .mq-qr{grid-column:1;grid-row:1;position:sticky;top:0}
+.mq-modal > .mq-qr h3{font-size:20px;margin-bottom:6px !important}
+.mq-modal > .mq-qr p{font-size:14px !important;margin-bottom:14px !important}
+/* qrcode.js writes an inline width/height (248px); show it larger without changing the downloaded PNG */
+.mq-modal #mqCanvas{width:320px !important;height:320px !important;image-rendering:pixelated;margin-top:8px !important;margin-bottom:14px !important}
+.mq-modal #mqUrl{font-size:12px !important}
+.mq-modal > .mqa{grid-column:2;grid-row:1;margin-top:0;padding-top:0;padding-left:36px;border-top:0;border-left:1px solid var(--bd)}
+.mq-modal .mqa-title{font-size:18px}
+.mq-modal .mqa-count{font-size:14px}
+.mq-modal .mqa-hint{font-size:13px;margin:6px 0 12px}
+.mq-modal .mqa-item{grid-template-columns:48px 176px minmax(0,1fr);gap:12px;padding:12px 0}
+.mq-modal .mqa-handle{width:48px;font-size:18px}
+.mq-modal .mqa-thumb{width:176px;height:176px}
+.mq-modal .mqa-pos{font-size:14px}
+.mq-modal .mqa-icon{width:40px;height:40px;font-size:16px}
+.mq-modal .mqa-save{padding:8px 16px;font-size:14px}
+.mq-modal .mqa-msg{font-size:13px}
+.mq-modal .mqa-add{padding:12px;font-size:14px;margin-bottom:0}
+}
+/* Delete-ad confirmation: sits above the Member QR modal (#mqOverlay is z-index 300) */
+.cc-overlay.mqd-overlay{z-index:310;padding:12px}
+.mqd-modal{max-width:100%;text-align:left}
+.mqd-modal:focus{outline:none}
+.mqd-thumb{width:160px;height:120px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center}
+.mqd-thumb img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;border-radius:6px;background:#fff7ed}
+.mqd-thumb img:not([src]){visibility:hidden}
+.mqd-btn{padding:6px 14px;font-size:12px}
+.mqd-danger{background:var(--re);color:#fff}
+.mqd-danger:hover:not(:disabled){opacity:.87}
+/* Phones: the topbar makes the page wider than the screen, so a fixed overlay would be centred
+   in that wider area and the modal would land half off-screen. While the Member QR modal is open,
+   lock page scrolling (the browser then snaps back to the screen) and pin the modal to the screen:
+   12px gutters, full width, scrolls vertically. Only #mqOverlay is affected. */
+@media (max-width:480px){
+html:has(#mqOverlay.show),html:has(#mqOverlay.show) body{overflow:hidden}
+#mqOverlay{right:auto;bottom:auto;width:100vw;height:100vh;height:100dvh;padding:12px;box-sizing:border-box;justify-content:flex-start;align-items:flex-start}
+#mqOverlay .mq-modal{width:100% !important;max-width:none;max-height:100%}
+#mqdOverlay{right:auto;bottom:auto;width:100vw;height:100vh;height:100dvh}
+}
+/* Phones: the rounded card (.mq-shell) fills the pinned overlay; .mq-modal inside it scrolls */
+@media (max-width:480px){
+#mqOverlay .mq-shell{width:100%;max-width:none;max-height:100%}
+.mq-x{right:14px}
+}
 </style>
 </head>
 <body>
@@ -810,7 +918,7 @@ let _mqActiveTier = '';
 async function openMemberQr() {
   _mqActiveTier = '';
   document.getElementById('mqOverlay').classList.add('show');
-  renderMqQr('');
+  renderMqQr(''); mqaBindOnce(); loadMqAds();
   const chips = document.getElementById('mqChips');
   chips.innerHTML = '<span style="font-size:11px;color:var(--gy)">Loading tiers…</span>';
   try {
@@ -826,7 +934,7 @@ async function openMemberQr() {
     }
   } catch { chips.innerHTML = '<span style="font-size:11px;color:var(--gy)">Failed to load tiers</span>'; }
 }
-function closeMemberQr() { document.getElementById('mqOverlay').classList.remove('show'); }
+function closeMemberQr() { document.getElementById('mqOverlay').classList.remove('show'); mqaRevokeAll(); }
 function selectMqTier(el) {
   document.querySelectorAll('.mq-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
@@ -908,6 +1016,673 @@ async function downloadMqQr() {
   }
 }
 function escMq(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// <mqa-pure>
+// 返回 null 表示通过；否则返回错误码，UI 按码显示文案。顺序：类型白名单 → 张数 → 空文件。
+// 超过 1 MB 不在这里拒绝：由 mqaCompress() 在浏览器里压缩（GIF / SVG 等在第一步就被拒，不会进入压缩）
+function mqaPrecheck(file, count) {
+  if (!file || !file.type) return 'unknown_type';                 // 部分安卓文件管理器给出空 type
+  if (!['image/jpeg','image/png','image/webp'].includes(file.type)) return 'unsupported_type';
+  if (count >= 5) return 'limit_reached';
+  if (file.size === 0) return 'empty';
+  return null;
+}
+// 浏览器端压缩（服务端 1 MB 上限不变）：≤ 1 MB 原样上传，不重新编码、不缩小
+function mqaNeedsCompress(size) { return size > 1048576; }
+// 返回 null = 不压缩；否则返回目标尺寸：等比缩到长边 ≤ 1920，原图更小时不放大；宽高无效时 {w:0,h:0}（调用方按失败处理）
+function mqaPlanCompress(size, w, h) {
+  if (!mqaNeedsCompress(size)) return null;
+  if (!(w > 0 && h > 0)) return {w: 0, h: 0};
+  const s = Math.min(1, 1920 / Math.max(w, h));
+  return {w: Math.max(1, Math.round(w * s)), h: Math.max(1, Math.round(h * s))};
+}
+// 编码质量阶梯：0.85 起每次降 0.05，最低 0.6（用整数算，避免 0.85 - 0.05 的浮点误差）
+function mqaQualitySteps() { const out = []; for (let q = 85; q >= 60; q -= 5) out.push(q / 100); return out; }
+function mqaFmtSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+function mqaCompressMsg(from, to) { return 'Compressed automatically: ' + mqaFmtSize(from) + ' → ' + mqaFmtSize(to) + '（已自动压缩）'; }
+// 首页按图片比例自动适配：只有竖图（宽/高 < 0.8，如 9:16、3:4）提示，不阻断上传
+function mqaRatioWarn(w, h) { return w > 0 && h > 0 && w / h < 0.8; }
+function mqaRatioMsg(w, h) { if (!mqaRatioWarn(w, h)) return ''; return 'This image is ' + w + '×' + h + ' (portrait) — it will be shown smaller on the homepage; 1:1 or 16:9 is recommended（竖图会在首页缩小显示，建议使用 1:1 或 16:9）.'; }
+// 首页横竖混放判断：w/h ≥ 1.2 为横图，< 1.2 为竖图或正方形；尺寸缺失 / 非法（旧条目）的不参与判断
+const MQA_WIDE_RATIO = 1.2;
+function mqaIsWide(w, h) {             // true | false | null（尺寸无效）
+  const ok = v => Number.isSafeInteger(v) && v > 0;
+  return ok(w) && ok(h) ? w / h >= MQA_WIDE_RATIO : null;
+}
+function mqaMixedRatios(ads) {         // 同时有横图和竖 / 方图 → true
+  let wide = false, tall = false;
+  for (const a of Array.isArray(ads) ? ads : []) {
+    const k = a ? mqaIsWide(a.w, a.h) : null;
+    if (k === true) wide = true; else if (k === false) tall = true;
+  }
+  return wide && tall;
+}
+// 链接输入的提示性预检：'' 合法（表示清空）；返回 null 或 'bad_link'
+function mqaLinkHint(v) { v = String(v ?? '').trim(); if (!v) return null; const m = /^https?:\/\/([^\s/?#]+)/i.exec(v); return v.length <= 500 && m && !/\s/.test(v) && !/[<>^|%\\]/.test(m[1].replace(/^.*@/, '')) ? null : 'bad_link'; }
+// 拖动排序。mids：拖动开始时每行中线的 y（按当前顺序）；y：被拖行此刻的中心。
+// 被拖行的中心必须严格越过相邻行的中线才换位，正好压在中线上不算；y 不是数字时留在原位。
+function mqaDropIndex(mids, from, y) {
+  let to = from;
+  for (let k = 0; k < mids.length; k++) {
+    if (k < from && y < mids[k]) to--;
+    if (k > from && y > mids[k]) to++;
+  }
+  return to;
+}
+// 返回新数组：ids[from] 移到 to；下标越界时原样复制
+function mqaMoveIds(ids, from, to) {
+  const out = ids.slice();
+  if (from < 0 || from >= out.length || to < 0 || to >= out.length) return out;
+  out.splice(to, 0, out.splice(from, 1)[0]);
+  return out;
+}
+function mqaSameOrder(a, b) { return a.length === b.length && a.every((x, i) => x === b[i]); }
+// 拖动中第 i 行（被拖行除外）为放下位置让位的方向：-1 上移一格，1 下移一格，0 不动
+function mqaShiftFor(i, from, to) {
+  if (i === from) return 0;
+  if (from < to && i > from && i <= to) return -1;
+  if (to < from && i >= to && i < from) return 1;
+  return 0;
+}
+// 指针靠近弹窗可视区上下边缘时每帧滚动的像素：边缘区 48px（可视区很矮时取高度的 1/3），越靠边越快，最多 16px
+function mqaAutoScrollStep(y, top, bottom) {
+  const edge = Math.min(48, (bottom - top) / 3), max = 16;
+  if (!(edge > 0)) return 0;
+  if (y < top + edge) return -Math.ceil(max * Math.min(1, (top + edge - y) / edge));
+  if (y > bottom - edge) return Math.ceil(max * Math.min(1, (y - bottom + edge) / edge));
+  return 0;
+}
+function mqaPosMsg(n) { return 'Moved to position ' + n + '（已移到第 ' + n + ' 位）'; }
+function mqaHandleLabel(n) { return 'Drag to reorder ad ' + n + '（拖动排序）'; }
+// </mqa-pure>
+
+// ── Member QR: Homepage Ads block ────────────────────────────────────────────
+// This script runs BEFORE the #mqOverlay HTML is parsed, so nothing here may touch
+// the modal DOM at top level: only declarations below. Listeners are attached once,
+// lazily, by mqaBindOnce() from openMemberQr().
+let _mqaBound = false;
+let _mqaBusy = false;
+let _mqaUploading = false;
+let _mqaState = 'idle';          // idle | loading | error | ready
+let _mqaLoadSeq = 0;
+let _mqaMsgTimer = 0;
+let _mqaAds = [];
+const _mqaThumbs = new Map();    // id -> Promise<objectURL|null>
+const MQA_TEXT = {
+  limit_reached: 'You can upload up to 5 ads',
+  unknown_type: 'Unrecognised file type. Please choose a JPG, PNG or WebP image.',
+  unsupported_type: 'Only JPG, PNG or WebP images are allowed',
+  too_large: 'Image is larger than 1 MB',
+  empty: 'Image is empty',
+  bad_link: 'Invalid link（链接无效）. It must start with http:// or https:// and have a valid domain (max 500 characters).',
+  upload_failed: 'Upload failed. Make sure the image is under 1 MB and try again.',
+  compressing: 'Compressing…（压缩中）',
+  compress_failed: 'This image could not be compressed under 1 MB — please choose a smaller image（图片无法压缩到 1 MB 以下，请换一张较小的图片）',
+  network: 'Network error, please try again.',
+};
+function mqaBindOnce() {
+  if (_mqaBound) return;
+  const sec  = document.querySelector('#mqOverlay .mqa');
+  const list = document.getElementById('mqaList');
+  const file = document.getElementById('mqaFile');
+  const add  = document.getElementById('mqaAddBtn');
+  if (!sec || !list || !file || !add) return;      // should never happen; never throw (tier list must still load)
+  _mqaBound = true;
+  sec.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.stopPropagation();                          // keep the global Enter listener from calling load()
+    const input = e.target.closest('.mqa-link input');
+    if (input) { e.preventDefault(); mqaSaveLink(input.closest('.mqa-item')); }   // Enter in a link box = Save
+  });
+  list.addEventListener('click', mqaOnListClick);   // data-act delegation: del/save/retry
+  list.addEventListener('input', mqaOnListInput);   // Save enable/disable + mqaLinkHint
+  // 拖动排序（.mqa-handle）：Pointer Events，鼠标和手指通用；指针被把手捕获后事件仍冒泡到列表
+  list.addEventListener('pointerdown', mqaDragStart);
+  list.addEventListener('pointermove', mqaDragMove);
+  list.addEventListener('pointerup', mqaDragEnd);
+  list.addEventListener('pointercancel', mqaDragCancel);
+  list.addEventListener('lostpointercapture', mqaDragCancel);
+  list.addEventListener('keydown', mqaOnHandleKey);  // 焦点在把手上：上 / 下方向键移动一位
+  document.addEventListener('keydown', mqaDragKey, true);   // 拖动中按 Esc 取消（捕获阶段，先于其它监听）
+  file.addEventListener('change', mqaOnFileChange);
+  add.addEventListener('click', () => file.click());
+}
+function mqaMsg(text, isErr, sticky) {
+  const el = document.getElementById('mqaMsg');
+  if (!el) return;
+  clearTimeout(_mqaMsgTimer);
+  el.textContent = text || '';
+  el.classList.toggle('mqa-err', !!isErr);
+  if (text && !isErr && !sticky) _mqaMsgTimer = setTimeout(() => { el.textContent = ''; }, 2500);
+}
+// Text for a failed response: server JSON error first, else by HTTP status
+// (e.g. an HTML 413 page from a proxy).
+function mqaErrText(status, data) {
+  if (data && typeof data.error === 'string' && data.error) return data.error;
+  if (status === 413) return MQA_TEXT.too_large;
+  if (status === 415) return MQA_TEXT.unsupported_type;
+  if (status >= 500) return 'Server error (HTTP ' + status + '), please try again.';
+  return 'Request failed (HTTP ' + status + '), please try again.';
+}
+// fetch + JSON parse; never throws. netErr = true when fetch itself failed.
+async function mqaApi(url, opts) {
+  let r;
+  try { r = await fetch(url, opts); } catch { return {ok: false, status: 0, data: null, netErr: true}; }
+  let data = null;
+  try { data = await r.json(); } catch { data = null; }
+  return {ok: r.ok && !!(data && data.ok), status: r.status, data, netErr: false};
+}
+function mqaSavedLink(id) {
+  const ad = _mqaAds.find(a => a.id === id);
+  return (ad && ad.link) || '';
+}
+// Re-apply enabled/disabled state without re-rendering (keeps unsaved inputs).
+function mqaSync() {
+  const list = document.getElementById('mqaList');
+  const add  = document.getElementById('mqaAddBtn');
+  if (!list || !add) return;
+  add.disabled = _mqaBusy || _mqaState !== 'ready' || _mqaAds.length >= 5;
+  add.textContent = _mqaUploading === 'compress' ? MQA_TEXT.compressing : _mqaUploading ? 'Uploading…' : '+ Add image';
+  const rows = [...list.querySelectorAll('.mqa-item')];
+  rows.forEach(li => {
+    // 只有 1 张图：把手禁用。busy 时用 aria-disabled（不用 disabled），键盘排序时焦点才不会丢
+    const handle = li.querySelector('.mqa-handle');
+    handle.disabled = rows.length < 2;
+    if (_mqaBusy && rows.length > 1) handle.setAttribute('aria-disabled', 'true'); else handle.removeAttribute('aria-disabled');
+    li.querySelector('[data-act="del"]').disabled  = _mqaBusy;
+    li.querySelector('[data-act="save"]').disabled = _mqaBusy || li.querySelector('.mqa-link input').value === mqaSavedLink(li.dataset.id);
+  });
+  list.querySelectorAll('[data-act="retry"]').forEach(b => { b.disabled = _mqaBusy; });
+  // 横竖混放提示：加载 / 上传 / 删除（经 mqaRender）和排序成功后都会走到这里重新判断
+  const mix = document.getElementById('mqaMix');
+  if (mix) mix.hidden = !(_mqaState === 'ready' && mqaMixedRatios(_mqaAds));
+}
+// mode: true = 上传中（Uploading…）| 'compress' = 压缩中（Compressing…）
+function mqaSetBusy(busy, mode) {
+  _mqaBusy = busy;
+  _mqaUploading = busy && mode ? (mode === 'compress' ? 'compress' : true) : false;
+  mqaSync();
+}
+function mqaThumb(id) {
+  if (_mqaThumbs.has(id)) return _mqaThumbs.get(id);
+  const p = fetch('/api/merchant/ads/' + encodeURIComponent(id) + '/image', {headers: hdr()})
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
+    .then(b => URL.createObjectURL(b))
+    .catch(() => { if (_mqaThumbs.get(id) === p) _mqaThumbs.delete(id); return null; });   // next render retries
+  _mqaThumbs.set(id, p);
+  return p;
+}
+function mqaDropThumb(id) {
+  const p = _mqaThumbs.get(id);
+  _mqaThumbs.delete(id);
+  if (p) p.then(u => { if (u) URL.revokeObjectURL(u); }, () => {});
+}
+function mqaRevokeAll() {
+  const snap = [..._mqaThumbs.values()];
+  _mqaThumbs.clear();
+  snap.forEach(p => p.then(u => { if (u) URL.revokeObjectURL(u); }, () => {}));
+}
+function mqaRender() {
+  const list  = document.getElementById('mqaList');
+  const count = document.getElementById('mqaCount');
+  if (!list || !count) return;
+  count.textContent = _mqaAds.length + '/5';
+  if (!_mqaAds.length) {
+    list.innerHTML = '<li class="mqa-state">No ads yet. Without ads the member homepage stays exactly as it is now.</li>';
+  } else {
+    list.innerHTML = _mqaAds.map((a, i) => {
+      const n = i + 1;
+      return `<li class="mqa-item" data-id="${escMq(a.id)}">
+  <button type="button" class="mqa-handle" aria-label="${mqaHandleLabel(n)}" aria-describedby="mqaDragHelp" title="Drag to reorder（拖动排序）"${_mqaAds.length < 2 ? ' disabled' : ''}><span aria-hidden="true">⋮⋮</span></button>
+  <div class="mqa-thumb"><img alt="Ad ${n}"></div>
+  <div class="mqa-actions">
+    <span class="mqa-pos">#${n}</span>
+    <button type="button" class="mqa-icon mqa-del" data-act="del" aria-label="Delete ad ${n}">✕</button>
+  </div>
+  <div class="mqa-link">
+    <input type="url" maxlength="500" placeholder="Link (optional) https://…" aria-label="Link for ad ${n}" value="${escMq(a.link || '')}">
+    <button type="button" class="btn btn-p mqa-save" data-act="save" disabled>Save</button>
+  </div>
+</li>`;
+    }).join('');
+    _mqaAds.forEach(a => {
+      const p = mqaThumb(a.id);
+      p.then(u => {
+        if (!u || _mqaThumbs.get(a.id) !== p) return;     // revoked/replaced meanwhile
+        const li = [...list.children].find(x => x.dataset.id === a.id);
+        const img = li && li.querySelector('.mqa-thumb img');
+        if (img) img.src = u;
+      });
+    });
+  }
+  mqaSync();
+}
+async function loadMqAds() {
+  const list = document.getElementById('mqaList');
+  if (!list) return;
+  const seq = ++_mqaLoadSeq;
+  _mqaState = 'loading';
+  mqaMsg('');
+  list.innerHTML = '<li class="mqa-state">Loading ads…</li>';
+  mqaSync();
+  const res = await mqaApi('/api/merchant/ads', {headers: hdr()});
+  if (seq !== _mqaLoadSeq) return;                      // a newer load started
+  if (res.ok && Array.isArray(res.data.ads)) {
+    _mqaAds = res.data.ads;
+    _mqaState = 'ready';
+    mqaRender();
+  } else {
+    _mqaState = 'error';
+    list.innerHTML = '<li class="mqa-state">Couldn\'t load ads. <button type="button" class="btn btn-g" data-act="retry">Retry</button></li>';
+    mqaSync();
+  }
+}
+// Apply a successful write response ({ads:[...]}) and redraw the list.
+function mqaApply(data, msg) {
+  if (data && Array.isArray(data.ads)) _mqaAds = data.ads;
+  mqaRender();
+  mqaMsg(msg);
+}
+// <mqa-drag>
+// 拖动排序：按住行左侧的把手（.mqa-handle）拖动整行；焦点在把手上时，上 / 下方向键移动一位。
+// 顶层只有声明（H1），监听由 mqaBindOnce() 绑定。拖动中只切换 class，并通过 CSS 自定义属性
+// --mqa-dy（被拖行的位移）和 --mqa-h（其它行让位的距离）把数值交给样式表，具体样式都写在样式表里。
+let _mqaDrag = null;             // 拖动中的状态；没有拖动时为 null
+function mqaDragStart(e) {
+  const handle = e.target && e.target.closest ? e.target.closest('.mqa-handle') : null;
+  if (!handle || handle.disabled || _mqaBusy || _mqaDrag || e.isPrimary === false) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;          // 只认鼠标左键
+  const list = document.getElementById('mqaList');
+  const li = handle.closest('.mqa-item');
+  const rows = list ? [...list.querySelectorAll('.mqa-item')] : [];
+  const from = rows.indexOf(li);
+  if (from < 0 || rows.length < 2 || !_mqaAds[from] || _mqaAds[from].id !== li.dataset.id) return;
+  const modal = list.closest('.mq-modal');                         // 弹窗本身是滚动容器
+  const rects = rows.map(r => r.getBoundingClientRect());
+  _mqaDrag = {
+    pointerId: e.pointerId, handle, list, modal, rows, from, to: from, id: li.dataset.id,
+    ids: _mqaAds.map(a => a.id), mids: rects.map(r => r.top + r.height / 2),
+    startY: e.clientY, lastY: e.clientY, startScroll: modal ? modal.scrollTop : 0, raf: 0,
+  };
+  try { handle.setPointerCapture(e.pointerId); } catch { /* 没有捕获时，指针在列表上方仍能收到移动事件 */ }
+  list.style.setProperty('--mqa-h', rects[from].height + 'px');
+  list.classList.add('mqa-sorting');
+  li.classList.add('mqa-dragging');
+}
+// 按指针位置和弹窗已滚动的距离，更新被拖行的位移和其它行的让位。显示位移限制在首行与末行之间
+// （不会把弹窗内容撑高）；放下位置按未限制的位置算，否则正好压在首 / 末行中线上，到不了两端。
+function mqaDragUpdate() {
+  const d = _mqaDrag;
+  const m = d.mids;
+  const scrolled = d.modal ? d.modal.scrollTop - d.startScroll : 0;
+  const raw = d.lastY - d.startY + scrolled;
+  const dy = Math.max(m[0] - m[d.from], Math.min(m[m.length - 1] - m[d.from], raw));   // 只限制显示位置
+  d.rows[d.from].style.setProperty('--mqa-dy', dy + 'px');
+  const to = mqaDropIndex(m, d.from, m[d.from] + raw);
+  if (to === d.to) return;
+  d.to = to;
+  d.rows.forEach((r, i) => {
+    const s = mqaShiftFor(i, d.from, to);
+    r.classList.toggle('mqa-shift-up', s < 0);
+    r.classList.toggle('mqa-shift-down', s > 0);
+  });
+}
+// 指针在弹窗上下边缘区时，每帧滚动一次弹窗；同一时间最多排一帧
+function mqaDragAuto() {
+  const d = _mqaDrag;
+  if (!d || d.raf || !d.modal) return;
+  const r = d.modal.getBoundingClientRect();
+  if (mqaAutoScrollStep(d.lastY, r.top, r.bottom)) d.raf = requestAnimationFrame(mqaDragFrame);
+}
+function mqaDragFrame() {
+  const d = _mqaDrag;
+  if (!d) return;
+  d.raf = 0;
+  const r = d.modal.getBoundingClientRect();
+  const step = mqaAutoScrollStep(d.lastY, r.top, r.bottom);
+  if (!step) return;
+  const before = d.modal.scrollTop;
+  d.modal.scrollTop = before + step;
+  if (d.modal.scrollTop === before) return;                        // 已经滚到头
+  mqaDragUpdate();
+  d.raf = requestAnimationFrame(mqaDragFrame);
+}
+function mqaDragMove(e) {
+  const d = _mqaDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  d.lastY = e.clientY;
+  mqaDragUpdate();
+  mqaDragAuto();
+}
+// 结束拖动并清掉所有拖动样式（先去掉 mqa-sorting，复位时不播放过渡）
+function mqaDragClear() {
+  const d = _mqaDrag;
+  if (!d) return;
+  _mqaDrag = null;
+  if (d.raf) cancelAnimationFrame(d.raf);
+  d.list.classList.remove('mqa-sorting');
+  d.list.style.removeProperty('--mqa-h');
+  d.rows.forEach(r => {
+    r.classList.remove('mqa-dragging', 'mqa-shift-up', 'mqa-shift-down');
+    r.style.removeProperty('--mqa-dy');
+  });
+  try { if (d.handle.hasPointerCapture(d.pointerId)) d.handle.releasePointerCapture(d.pointerId); } catch { /* 已释放 */ }
+}
+function mqaDragEnd(e) {
+  const d = _mqaDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  d.lastY = e.clientY;
+  mqaDragUpdate();
+  mqaDragClear();
+  if (d.to === d.from || !mqaSameOrder(d.ids, _mqaAds.map(a => a.id))) return;   // 没换位，或拖动期间列表已变
+  return mqaSaveOrder(mqaMoveIds(d.ids, d.from, d.to), d.id, false);
+}
+// pointercancel / lostpointercapture / Esc：取消拖动，行回到原来的位置，不发请求
+function mqaDragCancel(e) {
+  if (_mqaDrag && !(e && e.pointerId !== undefined && e.pointerId !== _mqaDrag.pointerId)) mqaDragClear();
+}
+function mqaDragKey(e) {
+  if (!_mqaDrag || e.key !== 'Escape') return;
+  e.preventDefault();
+  e.stopPropagation();
+  mqaDragCancel();
+}
+function mqaOnHandleKey(e) {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  const handle = e.target && e.target.closest ? e.target.closest('.mqa-handle') : null;
+  if (!handle) return;
+  e.preventDefault();                                              // 方向键不滚动弹窗
+  if (handle.disabled || _mqaBusy || _mqaDrag) return;
+  const li = handle.closest('.mqa-item');
+  const ids = _mqaAds.map(a => a.id);
+  const from = li ? ids.indexOf(li.dataset.id) : -1;
+  const to = from + (e.key === 'ArrowUp' ? -1 : 1);
+  if (from < 0 || to < 0 || to >= ids.length) return;
+  return mqaSaveOrder(mqaMoveIds(ids, from, to), ids[from], true);
+}
+// 按 ids 的顺序移动现有的行（不重画，未保存的链接输入和缩略图都保留），并更新序号和无障碍标签
+function mqaReorderRows(list, ids) {
+  if (!list) return;
+  const rows = [...list.querySelectorAll('.mqa-item')];
+  ids.forEach((id, i) => {
+    const li = rows.find(r => r.dataset.id === id);
+    const at = list.querySelectorAll('.mqa-item')[i];
+    if (li && at !== li) list.insertBefore(li, at || null);
+  });
+  [...list.querySelectorAll('.mqa-item')].forEach((li, i) => {
+    const n = i + 1;
+    li.querySelector('.mqa-pos').textContent = '#' + n;
+    li.querySelector('.mqa-thumb img').alt = 'Ad ' + n;
+    li.querySelector('.mqa-handle').setAttribute('aria-label', mqaHandleLabel(n));
+    li.querySelector('[data-act="del"]').setAttribute('aria-label', 'Delete ad ' + n);
+    li.querySelector('.mqa-link input').setAttribute('aria-label', 'Link for ad ' + n);
+  });
+}
+function mqaFocusHandle(list, id) {
+  const li = list && [...list.querySelectorAll('.mqa-item')].find(r => r.dataset.id === id);
+  const handle = li && li.querySelector('.mqa-handle');
+  if (handle) handle.focus();
+}
+// 保存新顺序（完整排列）。先按新顺序显示，请求期间 busy；失败时换回拖动前的顺序并提示。
+// keepFocus：键盘排序时，行移动后把焦点放回这张图的把手。
+async function mqaSaveOrder(ids, id, keepFocus) {
+  const before = _mqaAds.map(a => a.id);
+  if (_mqaBusy || mqaSameOrder(before, ids)) return;
+  const list = document.getElementById('mqaList');
+  mqaReorderRows(list, ids);
+  if (keepFocus) mqaFocusHandle(list, id);
+  mqaSetBusy(true);
+  const res = await mqaApi('/api/merchant/ads/order', {
+    method: 'PUT', headers: {'Content-Type': 'application/json', ...hdr()}, body: JSON.stringify({ids})
+  });
+  mqaSetBusy(false);
+  const now = res.ok && res.data && Array.isArray(res.data.ads) ? res.data.ads : null;
+  if (now && mqaSameOrder(now.map(a => a.id), ids)) {
+    _mqaAds = now;
+    mqaSync();
+    mqaMsg(mqaPosMsg(ids.indexOf(id) + 1));                        // #mqaMsg 是 aria-live 区域：播报「已移到第 N 位」
+  } else if (res.ok) {
+    mqaApply(res.data, 'Saved');                                   // 服务器给的顺序不同：按服务器数据重画
+  } else {
+    mqaReorderRows(list, before);
+    mqaMsg(res.netErr ? MQA_TEXT.network : mqaErrText(res.status, res.data), true);
+  }
+  if (keepFocus) mqaFocusHandle(list, id);
+}
+// </mqa-drag>
+async function mqaOnListClick(e) {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn || btn.disabled || _mqaBusy) return;
+  const act = btn.dataset.act;
+  if (act === 'retry') { loadMqAds(); return; }
+  const item = btn.closest('.mqa-item');
+  if (!item) return;
+  const id = item.dataset.id;
+  if (act === 'save') { mqaSaveLink(item); return; }
+  if (act === 'del') mqaAskDelete(id, btn);
+}
+function mqaOnListInput(e) {
+  const input = e.target.closest('.mqa-link input');
+  if (!input) return;
+  mqaSync();                                            // Save enabled only when the value changed
+  const el = document.getElementById('mqaMsg');
+  if (mqaLinkHint(input.value) === 'bad_link') mqaMsg(MQA_TEXT.bad_link, true);   // hint only, never blocks Save
+  else if (el && el.textContent === MQA_TEXT.bad_link) mqaMsg('');
+}
+async function mqaSaveLink(item) {
+  if (!item || _mqaBusy) return;
+  const input = item.querySelector('.mqa-link input');
+  const save  = item.querySelector('[data-act="save"]');
+  if (!input || !save || save.disabled) return;
+  const id = item.dataset.id;
+  mqaSetBusy(true);
+  const res = await mqaApi('/api/merchant/ads/' + encodeURIComponent(id), {
+    method: 'PUT', headers: {'Content-Type': 'application/json', ...hdr()}, body: JSON.stringify({link: input.value.trim()})
+  });
+  if (res.ok && Array.isArray(res.data.ads)) {
+    _mqaAds = res.data.ads;
+    input.value = mqaSavedLink(id);                     // server-normalised value
+    mqaSetBusy(false);
+    mqaMsg('Saved');
+  } else {
+    mqaSetBusy(false);                                  // keep what the merchant typed
+    mqaMsg(res.netErr ? MQA_TEXT.network : mqaErrText(res.status, res.data), true);
+    const msgEl = document.getElementById('mqaMsg');    // phones: the message sits below the list
+    if (msgEl && msgEl.scrollIntoView) msgEl.scrollIntoView({block: 'nearest'});
+  }
+}
+async function mqaOnFileChange(e) {
+  const input = e.target;
+  try {
+    const file = input.files && input.files[0];
+    if (!file || _mqaBusy) return;
+    const code = mqaPrecheck(file, _mqaAds.length);
+    if (code) { mqaMsg(MQA_TEXT[code], true); return; }  // rejected locally, no request
+    let body = file, note = '', warn = '';
+    if (mqaNeedsCompress(file.size)) {
+      // > 1 MB：先在浏览器里压缩；失败（压不到 1 MB / 解码或编码失败）就拒绝，不发请求
+      mqaMsg(MQA_TEXT.compressing, false, true);
+      mqaSetBusy(true, 'compress');
+      const out = await mqaCompress(file);
+      if (!out) { mqaSetBusy(false); mqaMsg(MQA_TEXT.compress_failed, true); return; }
+      body = out.blob;
+      note = mqaCompressMsg(file.size, out.blob.size);
+      warn = mqaRatioMsg(out.w, out.h);                 // 竖图提示按压缩后的宽高
+    } else {
+      try {
+        const bm = await createImageBitmap(file);
+        const w = bm.width, h = bm.height;
+        bm.close();
+        warn = mqaRatioMsg(w, h);
+      } catch { /* cannot decode here: skip the ratio hint, the server still validates */ }
+    }
+    const info = [note, warn].filter(Boolean).join(' ');
+    mqaMsg(info, false, true);
+    mqaSetBusy(true, true);
+    const res = await mqaApi('/api/merchant/ads', {
+      method: 'POST', headers: {...hdr(), 'Content-Type': body.type}, body
+    });
+    mqaSetBusy(false);
+    if (res.ok) {
+      mqaApply(res.data, 'Uploaded');
+      if (info) mqaMsg('Uploaded. ' + info, false, true);
+    } else {
+      mqaMsg(res.netErr ? MQA_TEXT.upload_failed : mqaErrText(res.status, res.data), true);
+    }
+  } finally {
+    input.value = '';                                   // re-selecting the same file fires change again
+  }
+}
+// <mqa-compress>
+// 浏览器端压缩，只处理 > 1 MB 的图片。顶层只有函数声明（H1）。任何失败都返回 null：调用方提示并且不发请求。
+// 解码：createImageBitmap(file, {imageOrientation:'from-image'})，不支持或失败时退回 <img> + decode()。
+async function mqaDecode(file) {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bm = await createImageBitmap(file, {imageOrientation: 'from-image'});
+      return {src: bm, w: bm.width, h: bm.height, close: () => { try { bm.close(); } catch { /* already closed */ } }};
+    } catch { /* options not supported or cannot decode: try <img> */ }
+  }
+  let url = '';
+  try {
+    url = URL.createObjectURL(file);
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return {src: img, w: img.naturalWidth, h: img.naturalHeight, close: () => URL.revokeObjectURL(url)};
+  } catch {
+    if (url) URL.revokeObjectURL(url);
+    return null;
+  }
+}
+function mqaToBlob(canvas, type, q) {
+  return new Promise(res => { try { canvas.toBlob(b => res(b || null), type, q); } catch { res(null); } });
+}
+// 返回 {blob, w, h} 或 null。优先 WebP（toBlob 实测：返回的 type 不是 image/webp = 不支持），否则 JPEG（先铺白底，透明处不会变黑）。
+async function mqaCompress(file) {
+  const img = await mqaDecode(file);
+  if (!img) return null;
+  let canvas = null;
+  try {
+    const plan = mqaPlanCompress(file.size, img.w, img.h);
+    if (!plan || !(plan.w > 0 && plan.h > 0)) return null;
+    canvas = document.createElement('canvas');
+    canvas.width = plan.w;
+    canvas.height = plan.h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;                                      // 例如超过 iOS 的画布面积上限
+    ctx.drawImage(img.src, 0, 0, plan.w, plan.h);
+    const steps = mqaQualitySteps();
+    let type = 'image/webp';
+    let first = await mqaToBlob(canvas, type, steps[0]);
+    if (!first || first.type !== type) {
+      type = 'image/jpeg';
+      first = null;
+      ctx.clearRect(0, 0, plan.w, plan.h);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, plan.w, plan.h);
+      ctx.drawImage(img.src, 0, 0, plan.w, plan.h);
+    }
+    for (let i = 0; i < steps.length; i++) {
+      const blob = i === 0 && first ? first : await mqaToBlob(canvas, type, steps[i]);
+      if (!blob || blob.type !== type) return null;
+      if (blob.size <= 1048576) return {blob, w: plan.w, h: plan.h};
+    }
+    return null;                                               // 0.6 仍超过 1 MB
+  } catch {
+    return null;
+  } finally {
+    img.close();                                               // 释放 ImageBitmap / object URL
+    if (canvas) { canvas.width = 0; canvas.height = 0; }       // 释放画布内存
+  }
+}
+// </mqa-compress>
+// <mqa-delete-dialog>
+// In-page confirmation for deleting an ad (replaces window.confirm). Top level holds
+// declarations only (H1); listeners are attached by mqdBindOnce() on first use.
+let _mqdBound = false;
+let _mqdBusy = false;
+let _mqdId = '';
+let _mqdReturn = null;          // the ✕ button that opened the dialog
+function mqdBindOnce() {
+  if (_mqdBound) return true;
+  const ov = document.getElementById('mqdOverlay');
+  const cancel = document.getElementById('mqdCancel');
+  const ok = document.getElementById('mqdOk');
+  if (!ov || !cancel || !ok) return false;
+  _mqdBound = true;
+  ov.addEventListener('click', e => { if (e.target === ov) mqdClose(); });   // backdrop
+  ov.addEventListener('keydown', mqdOnKey);
+  cancel.addEventListener('click', mqdClose);
+  ok.addEventListener('click', mqdConfirm);
+  return true;
+}
+function mqdOnKey(e) {
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); mqdClose(); return; }
+  if (e.key === 'Enter') { e.stopPropagation(); return; }   // button default still fires; just never reaches the global Enter → load()
+  if (e.key !== 'Tab') return;
+  e.preventDefault();                                        // keep focus inside the dialog
+  const f = [document.getElementById('mqdCancel'), document.getElementById('mqdOk')].filter(b => b && !b.disabled);
+  if (!f.length) return;
+  const i = f.indexOf(document.activeElement);
+  f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+}
+function mqaAskDelete(id, btn) {
+  if (_mqdBusy || !mqdBindOnce()) return;
+  const ov = document.getElementById('mqdOverlay');
+  const img = document.getElementById('mqdImg');
+  const err = document.getElementById('mqdErr');
+  const ok = document.getElementById('mqdOk');
+  const cancel = document.getElementById('mqdCancel');
+  _mqdId = id;
+  _mqdReturn = btn || null;
+  if (err) err.textContent = '';
+  ok.disabled = false; cancel.disabled = false; ok.textContent = 'Delete';
+  if (img) {
+    img.alt = 'Ad ' + (_mqaAds.findIndex(a => a.id === id) + 1);
+    img.removeAttribute('src');
+    mqaThumb(id).then(u => { if (u && _mqdId === id) img.src = u; });   // same cached object URL as the list
+  }
+  ov.classList.add('show');
+  cancel.focus();
+}
+function mqdHide() {
+  const ov = document.getElementById('mqdOverlay');
+  const img = document.getElementById('mqdImg');
+  if (ov) ov.classList.remove('show');
+  if (img) img.removeAttribute('src');
+  _mqdId = '';
+  const back = _mqdReturn;
+  _mqdReturn = null;
+  const target = back && back.isConnected ? back : document.getElementById('mqaAddBtn');   // ✕ is gone after a successful delete
+  if (target) target.focus();
+}
+function mqdClose() { if (!_mqdBusy) mqdHide(); }
+async function mqdConfirm() {
+  const id = _mqdId;
+  if (_mqdBusy || !id) return;
+  const modal = document.getElementById('mqdModal');
+  const ok = document.getElementById('mqdOk');
+  const cancel = document.getElementById('mqdCancel');
+  const err = document.getElementById('mqdErr');
+  _mqdBusy = true;
+  if (modal) modal.focus();                     // move focus off the button before disabling it, so Enter can't fall through to load()
+  ok.disabled = true; cancel.disabled = true; ok.textContent = 'Deleting…';
+  if (err) err.textContent = '';
+  mqaSetBusy(true);
+  const res = await mqaApi('/api/merchant/ads/' + encodeURIComponent(id), {method: 'DELETE', headers: hdr()});
+  _mqdBusy = false;
+  mqaSetBusy(false);
+  ok.disabled = false; cancel.disabled = false; ok.textContent = 'Delete';
+  if (res.ok) {
+    mqaDropThumb(id);
+    mqaApply(res.data, 'Deleted');
+    mqdHide();
+  } else {
+    if (err) err.textContent = res.netErr ? MQA_TEXT.network : mqaErrText(res.status, res.data);
+    ok.focus();
+  }
+}
+// </mqa-delete-dialog>
 
 document.addEventListener('keydown', e => { if (e.key==='Enter') load(); });
 load();   // auto-load on entry
@@ -1046,15 +1821,43 @@ load();   // auto-load on entry
 </div>
 <!-- ── Member QR Modal ──────────────────────────────────────────────────── -->
 <div class="cc-overlay" id="mqOverlay" onclick="if(event.target===this)closeMemberQr()" style="z-index:300">
-  <div class="cc-modal" style="width:320px;padding:24px">
+  <div class="mq-shell">
+  <button type="button" class="mq-x" aria-label="Close（关闭）" title="Close（关闭）" onclick="closeMemberQr()"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"/></svg></button>
+  <div class="cc-modal mq-modal" style="padding:24px">
+    <div class="mq-qr">
     <h3 style="margin-bottom:4px">Member Registration QR</h3>
     <p style="font-size:12px;color:var(--gy);margin-bottom:10px">Select a tier then download</p>
     <div id="mqChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;min-height:26px"></div>
     <canvas id="mqCanvas" style="display:block;margin:0 auto 10px;border-radius:6px"></canvas>
     <div id="mqUrl" style="font-size:10px;color:var(--gy);word-break:break-all;margin-bottom:14px;text-align:center"></div>
+    <div class="mq-dl"><button type="button" id="mqDownloadBtn" class="btn btn-p mq-dl-btn" onclick="downloadMqQr()">Download PNG</button></div>
+    </div>
+    <section class="mqa" aria-labelledby="mqaTitle">
+      <div class="mqa-head">
+        <h4 id="mqaTitle" class="mqa-title">首页广告 / Homepage Ads</h4>
+        <span id="mqaCount" class="mqa-count">0/5</span>
+      </div>
+      <p class="mqa-hint">Recommended 1600×900 or 1080×1080 · JPG / PNG / WebP · larger files are compressed automatically · up to 5（超过 1 MB 自动压缩，任何比例都会完整显示）</p>
+      <p id="mqaMix" class="mqa-hint mqa-mix" hidden>Mixing wide and tall/square images makes the homepage look uneven — using one ratio for all ads is recommended（同一组广告使用相同比例，首页显示会更整齐）</p>
+      <ul id="mqaList" class="mqa-list" aria-live="polite"></ul>
+      <div id="mqaMsg" class="mqa-msg" role="status" aria-live="polite"></div>
+      <p id="mqaDragHelp" class="mqa-sr">Use the Up / Down arrow keys on the handle to move an ad（用上下方向键调整顺序）</p>
+      <input type="file" id="mqaFile" class="mqa-file" accept="image/jpeg,image/png,image/webp" tabindex="-1" aria-hidden="true">
+      <button type="button" id="mqaAddBtn" class="btn btn-g mqa-add">+ Add image</button>
+    </section>
+  </div>
+  </div>
+</div>
+<!-- ── Delete-ad confirmation (above the Member QR modal) ── -->
+<div class="cc-overlay mqd-overlay" id="mqdOverlay">
+  <div class="cc-modal mqd-modal" id="mqdModal" role="alertdialog" aria-modal="true" aria-labelledby="mqdTitle" aria-describedby="mqdDesc" tabindex="-1">
+    <h3 id="mqdTitle">Delete this ad?</h3>
+    <p id="mqdDesc">It will disappear from the member homepage immediately.（删除后顾客首页立即不显示）</p>
+    <div class="mqd-thumb"><img id="mqdImg" alt=""></div>
+    <div id="mqdErr" class="cc-err" role="alert"></div>
     <div class="cc-foot">
-      <button class="btn btn-g" style="padding:6px 14px;font-size:12px" onclick="closeMemberQr()">Close</button>
-      <button id="mqDownloadBtn" class="btn btn-p" style="padding:6px 14px;font-size:12px" onclick="downloadMqQr()">Download PNG</button>
+      <button type="button" id="mqdCancel" class="btn btn-g mqd-btn">Cancel</button>
+      <button type="button" id="mqdOk" class="btn mqd-danger mqd-btn">Delete</button>
     </div>
   </div>
 </div>

@@ -16,8 +16,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
+import member_ads
 
-VERSION  = '1.3.5'
+VERSION  = '1.4.0'
 SSL_CTX  = ssl._create_unverified_context()
 PORT     = int(os.environ.get('PORT') or 8080)   # env override so a local copy can run beside 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -33,6 +34,7 @@ CONFIG_FILE      = os.path.join(DATA_DIR, 'config.json')
 SYNC_STATE_FILE  = os.path.join(DATA_DIR, 'sync_state.json')
 PAY_METHODS_FILE = os.path.join(DATA_DIR, 'pay_methods.json')
 CUSTOMERS_FILE   = os.path.join(DATA_DIR, 'customers.json')
+MEMBER_ADS_DIR   = os.path.join(DATA_DIR, 'member_ads')   # created on first upload, not at startup
 
 
 SYNC_API_LIMIT      = 250   # max sync API calls per merchant per day
@@ -2569,6 +2571,52 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    # ── Member-portal home-page ads (member_ads.py) ───────────────────────────
+    def _ads_err(self, e):
+        if e.status >= 500:
+            traceback.print_exc()
+        self._json({'ok': False, 'error': e.message, 'code': e.code}, e.status, no_store=True)
+
+    def _ads_ctx(self):
+        # Identity comes ONLY from the Bearer session -- never from query, headers or body.
+        # On failure the response is sent here and the unread body is dropped with the connection.
+        mid = self._merch_auth()
+        if not mid:
+            self.close_connection = True
+            self._ads_err(member_ads.AdsError(401, 'not_logged_in')); return None
+        m = get_merchant(mid)
+        if not m:
+            self.close_connection = True
+            self._ads_err(member_ads.AdsError(404, 'merchant_not_found')); return None
+        return m
+
+    def _ads_json_body(self, limit=8192):
+        try:
+            n = member_ads.parse_content_length(self.headers.get('Content-Length'))
+        except member_ads.AdsError:
+            self.close_connection = True
+            raise
+        if not n:                                   # header missing counts as 0
+            raise member_ads.AdsError(400, 'bad_json')
+        if n > limit:
+            self.close_connection = True
+            raise member_ads.AdsError(413, 'too_large')
+        self.connection.settimeout(30)
+        try:
+            raw = self.rfile.read(n)
+        except (TimeoutError, OSError):
+            raw = b''
+        if len(raw) < n:
+            self.close_connection = True
+            raise member_ads.AdsError(400, 'incomplete_body')
+        try:
+            body = json.loads(raw.decode('utf-8'))
+        except ValueError:
+            raise member_ads.AdsError(400, 'bad_json')
+        if not isinstance(body, dict):
+            raise member_ads.AdsError(400, 'bad_json')
+        return body
+
     def _file(self, path):
         if not os.path.isfile(path):
             self.send_response(404); self.end_headers(); return
@@ -3141,6 +3189,35 @@ class Handler(BaseHTTPRequestHandler):
                     'quota'        : quota_snapshot(mid),
                 })
 
+        # ── Member-portal home-page ads ────────────────────────────────────────
+        elif pt == '/api/merchant/ads':
+            m = self._ads_ctx()
+            if not m: return
+            try:
+                ads = member_ads.load(MEMBER_ADS_DIR, m['id'])
+            except member_ads.AdsError as e:
+                self._ads_err(e); return
+            self._json({'ok': True, 'ads': member_ads.public_view(ads),
+                        'max': member_ads.MAX_ADS, 'max_bytes': member_ads.MAX_BYTES}, no_store=True)
+
+        elif pt.startswith('/api/merchant/ads/') and pt.endswith('/image'):
+            m = self._ads_ctx()
+            if not m: return
+            ad_id = pt[len('/api/merchant/ads/'):-len('/image')]
+            try:
+                if not member_ads.ID_RE.fullmatch(ad_id):
+                    raise member_ads.AdsError(404, 'ad_not_found')
+                data, ctype = member_ads.image_bytes(MEMBER_ADS_DIR, m['id'], ad_id)
+            except member_ads.AdsError as e:
+                self._ads_err(e); return
+            self.send_response(200)
+            self.send_header('Content-Type', ctype)
+            self.send_header('Content-Length', len(data))
+            self.send_header('X-Content-Type-Options', 'nosniff')
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(data)
+
         # ── Admin API ──────────────────────────────────────────────────────────
         elif pt == '/api/admin/merchants':
             if not self._admin_auth():
@@ -3431,6 +3508,45 @@ class Handler(BaseHTTPRequestHandler):
             token = new_merch_session(m['id'])
             self._json({'ok': True, 'token': token, 'name': m['name']})
 
+        # ── Member-portal home-page ads: upload (raw image bytes) ─────────────
+        elif pt == '/api/merchant/ads':
+            m = self._ads_ctx()
+            if not m: return
+            mid = m['id']
+            try:
+                member_ads.merchant_dir(MEMBER_ADS_DIR, mid)
+                if self.headers.get('Transfer-Encoding') is not None:   # chunked is not decoded here
+                    raise member_ads.AdsError(411, 'length_required')
+                n = member_ads.parse_content_length(self.headers.get('Content-Length'))
+                if n is None:
+                    raise member_ads.AdsError(411, 'length_required')
+                if n == 0:
+                    raise member_ads.AdsError(400, 'empty')
+                if n > member_ads.MAX_BYTES:
+                    raise member_ads.AdsError(413, 'too_large')
+                ctype = (self.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+                if ctype not in member_ads.DECLARED_TYPES:
+                    raise member_ads.AdsError(415, 'unsupported_type')
+                if len(member_ads.load(MEMBER_ADS_DIR, mid)) >= member_ads.MAX_ADS:
+                    raise member_ads.AdsError(409, 'limit_reached')
+            except member_ads.AdsError as e:
+                self.close_connection = True            # body never read
+                self._ads_err(e); return
+            self.connection.settimeout(30)
+            try:
+                data = self.rfile.read(n)
+            except (TimeoutError, OSError):
+                data = b''
+            if len(data) < n:
+                self.close_connection = True
+                self._ads_err(member_ads.AdsError(400, 'incomplete_body')); return
+            try:
+                ad, ads = member_ads.add(MEMBER_ADS_DIR, mid, data)
+            except member_ads.AdsError as e:
+                self._ads_err(e); return
+            print(f"  [ads] {m.get('account', '')} upload {ad['id']} {len(data)}B")
+            self._json({'ok': True, 'ad': ad, 'ads': ads}, 201, no_store=True)
+
         # ── Admin: raw pay methods for a merchant ─────────────────────────────
         elif pt.startswith('/api/admin/pay-methods/'):
             if not self._admin_auth():
@@ -3689,6 +3805,35 @@ class Handler(BaseHTTPRequestHandler):
                                    join_member=(bool(jm) if jm is not None else None))
             if m: self._json({'ok': True, 'merchant': {'id': m['id'], 'name': m['name'], 'account': m.get('account','')}})
             else: self._json({'ok': False, 'error': 'Merchant not found'}, 404)
+        # ── Member-portal home-page ads: order (matched before /<id>) ─────────
+        elif pt == '/api/merchant/ads/order':
+            m = self._ads_ctx()
+            if not m: return
+            try:
+                body = self._ads_json_body()
+                if 'ids' not in body:
+                    raise member_ads.AdsError(400, 'bad_order')
+                ads = member_ads.reorder(MEMBER_ADS_DIR, m['id'], body['ids'])
+            except member_ads.AdsError as e:
+                self._ads_err(e); return
+            print(f"  [ads] {m.get('account', '')} order {len(ads)}")
+            self._json({'ok': True, 'ads': ads}, no_store=True)
+        # ── Member-portal home-page ads: link ─────────────────────────────────
+        elif pt.startswith('/api/merchant/ads/'):
+            m = self._ads_ctx()
+            if not m: return
+            ad_id = pt[len('/api/merchant/ads/'):]
+            try:
+                body = self._ads_json_body()
+                if not member_ads.ID_RE.fullmatch(ad_id):
+                    raise member_ads.AdsError(404, 'ad_not_found')
+                if 'link' not in body:                  # only an explicit "" / null clears it
+                    raise member_ads.AdsError(400, 'bad_link')
+                ad, ads = member_ads.set_link(MEMBER_ADS_DIR, m['id'], ad_id, body['link'])
+            except member_ads.AdsError as e:
+                self._ads_err(e); return
+            print(f"  [ads] {m.get('account', '')} link {ad_id}")
+            self._json({'ok': True, 'ad': ad, 'ads': ads}, no_store=True)
         else:
             self.send_response(404); self.end_headers()
 
@@ -3700,6 +3845,19 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({'ok': False, 'error': 'Unauthorized'}, 401); return
             mid = pt[len('/api/merchants/'):]
             self._json({'ok': delete_merchant(mid)})
+        # ── Member-portal home-page ads: delete ───────────────────────────────
+        elif pt.startswith('/api/merchant/ads/'):
+            m = self._ads_ctx()
+            if not m: return
+            ad_id = pt[len('/api/merchant/ads/'):]
+            try:
+                if not member_ads.ID_RE.fullmatch(ad_id):
+                    raise member_ads.AdsError(404, 'ad_not_found')
+                ads = member_ads.delete(MEMBER_ADS_DIR, m['id'], ad_id)
+            except member_ads.AdsError as e:
+                self._ads_err(e); return
+            print(f"  [ads] {m.get('account', '')} delete {ad_id}")
+            self._json({'ok': True, 'ads': ads}, no_store=True)
         else:
             self.send_response(404); self.end_headers()
 

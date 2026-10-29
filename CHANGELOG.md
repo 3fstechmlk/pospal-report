@@ -2,6 +2,17 @@
 
 ---
 
+## v1.4.0 — 2026-10-29
+
+### New
+
+- **Member portal home-page ads.** In the Client Portal you can now upload up to
+  5 promotion images for your member portal home page, add an optional link to
+  each, change their order and delete them. Customers see them as a swipeable
+  carousel below the welcome card, changing every 5 seconds.
+
+---
+
 ## v1.3.5 — 2026-10-22
 
 ### New
