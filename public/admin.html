@@ -199,6 +199,11 @@ input.search:focus{border-color:var(--or)}
 .btn-copy-acct{background:none;border:none;padding:2px;cursor:pointer;color:#d1d5db;transition:color .15s;flex-shrink:0;display:inline-flex;align-items:center}
 .btn-copy-acct:hover{color:#6b7280}
 .btn-copy-acct.copied{color:#22c55e}
+.pending-check{width:24px;height:24px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;padding:0;border:1.5px solid #fdba74;border-radius:5px;background:var(--wh);color:transparent;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.pending-check:hover{border-color:var(--or)}
+.pending-check:disabled{cursor:progress}
+.pending-check:focus-visible{outline:2px solid var(--or);outline-offset:2px}
+.pending-check[aria-checked="true"]{background:var(--gr);border-color:var(--gr);color:#fff}
 
 /* ── Toast ── */
 .toast{position:fixed;bottom:24px;right:24px;background:#18181b;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;max-width:320px}
@@ -1500,6 +1505,10 @@ async function loadPending() {
         <span class="pending-acct">${esc(p.account)}</span>
         <button class="btn-copy-acct" data-acct="${esc(p.account)}" title="Copy account name" onclick="copyAcct(this)"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
         <span class="pending-section">${esc(p.section)}</span>
+        <button type="button" class="pending-check" role="checkbox"
+          aria-checked="${p.checked ? 'true' : 'false'}"
+          data-wfid="${esc(p.wf_id)}" title="Mark" aria-label="Mark ${esc(p.name)}"
+          onclick="togglePendingCheck(this)"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></button>
         <button class="btn btn-p btn-sm"
           data-name="${esc(p.name)}" data-account="${esc(p.account)}" data-wfid="${esc(p.wf_id)}"
           onclick="openSetupPending(this.dataset.name, this.dataset.account, this.dataset.wfid)">Setup</button>
@@ -1508,6 +1517,28 @@ async function loadPending() {
           onclick="dismissPending(this.dataset.id, this.dataset.account, this)" title="Dismiss">✕</button>
       </div>`).join('');
   } catch (e) { /* ignore */ }
+}
+
+// Tick state is stored server-side (data/pending_checked.json) per wf_id.
+// Flip the box immediately, then roll back if the save fails.
+async function togglePendingCheck(btn) {
+  if (btn.disabled) return;
+  const was = btn.getAttribute('aria-checked') === 'true';
+  btn.setAttribute('aria-checked', was ? 'false' : 'true');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/admin/pending-check', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({wf_id: btn.dataset.wfid, checked: !was})
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || ('HTTP ' + r.status));
+  } catch (e) {
+    btn.setAttribute('aria-checked', was ? 'true' : 'false');
+    showToast('Could not save tick: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function copyAcct(btn) {

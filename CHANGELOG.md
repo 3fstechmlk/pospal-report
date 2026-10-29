@@ -2,6 +2,17 @@
 
 ---
 
+## v1.4.1 — 2026-10-29
+
+### New
+
+- **Tick-off box in Pending Setup.** Each account in the Pending Setup list now
+  has a checkbox next to its Setup button. Click it to tick the account (green
+  with a white tick), click again to untick. Ticks are saved on the server, so
+  they stay after a page reload and every admin sees the same ticks.
+
+---
+
 ## v1.4.0 — 2026-10-29
 
 ### New

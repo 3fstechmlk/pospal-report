@@ -18,7 +18,7 @@ from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 import member_ads
 
-VERSION  = '1.4.0'
+VERSION  = '1.4.1'
 SSL_CTX  = ssl._create_unverified_context()
 PORT     = int(os.environ.get('PORT') or 8080)   # env override so a local copy can run beside 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -111,6 +111,32 @@ def _pending_undismiss(account):
     with open(PENDING_DISMISSED_FILE, 'w', encoding='utf-8') as f:
         json.dump(list(d), f)
 
+# Pending Setup row tick marks (admin checkbox). Set of wf_id strings.
+PENDING_CHECKED_FILE = os.path.join(DATA_DIR, 'pending_checked.json')
+_pending_checked_lock = threading.Lock()
+
+def _pending_checked():
+    if os.path.exists(PENDING_CHECKED_FILE):
+        try:
+            with open(PENDING_CHECKED_FILE, encoding='utf-8') as f:
+                return {str(x) for x in json.load(f)}
+        except Exception:
+            pass
+    return set()
+
+def _pending_set_checked(wf_id, checked):
+    """Tick/untick one pending row. Read-modify-write under a lock, atomic write."""
+    with _pending_checked_lock:
+        d = _pending_checked()
+        if checked:
+            d.add(str(wf_id))
+        else:
+            d.discard(str(wf_id))
+        tmp = PENDING_CHECKED_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(sorted(d), f)
+        os.replace(tmp, PENDING_CHECKED_FILE)
+
 def fetch_workflow_pending():
     """
     Read clients from workflow SQLite DB that have account_name set,
@@ -123,6 +149,7 @@ def fetch_workflow_pending():
     if not db:
         return [], False   # (results, db_found)
     dismissed = _pending_dismissed()
+    checked   = _pending_checked()
     existing  = {m.get('account', '').strip().lower() for m in get_all_merchants()}
     try:
         conn = _sqlite3.connect(db)
@@ -148,6 +175,7 @@ def fetch_workflow_pending():
                 'name'   : display,
                 'account': account,
                 'section': r['section'] or '',
+                'checked': wf_id in checked,
             })
         return results, True
     except Exception as e:
@@ -3584,6 +3612,22 @@ class Handler(BaseHTTPRequestHandler):
             if wf_id:
                 _pending_dismiss(wf_id, account or None)
             self._json({'ok': True})
+
+        # ── Admin: tick / untick a workflow pending entry ──────────────────────
+        elif pt == '/api/admin/pending-check':
+            if not self._admin_auth():
+                self._json({'ok': False, 'error': 'Unauthorized'}, 401); return
+            body    = self._body()
+            wf_id   = str(body.get('wf_id', '')).strip()
+            checked = body.get('checked')
+            if not wf_id or len(wf_id) > 64 or not isinstance(checked, bool):
+                self._json({'ok': False, 'error': 'wf_id and boolean checked required'}, 400); return
+            try:
+                _pending_set_checked(wf_id, checked)
+            except Exception as e:
+                print(f'[pending-check] save failed: {e}')
+                self._json({'ok': False, 'error': 'Save failed'}, 500); return
+            self._json({'ok': True, 'wf_id': wf_id, 'checked': checked})
 
         # ── Admin: add merchant ────────────────────────────────────────────────
         elif pt == '/api/merchants':
