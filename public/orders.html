@@ -110,6 +110,18 @@ tr.drow td{padding:0;border-bottom:1px solid var(--bd)}
 .irmk{font-size:10.5px;color:#b45309;margin-top:2px}
 .irmk::before{content:'Remark: ';color:#a16207;font-weight:600}
 
+/* Invoice TextBox checklist (transaction detail) */
+.tbx-list{margin-top:10px;border:1px solid var(--bd);border-radius:8px;padding:8px 11px;max-width:520px}
+.tbx-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gy)}
+.tbx-hint{font-weight:400;text-transform:none;letter-spacing:0;color:#a1a1aa;margin-left:6px}
+.tbx-item + .tbx-item{border-top:1px solid #f4f4f5}
+.tbx-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;cursor:pointer}
+.tbx-title{font-size:12px;color:var(--dk);font-weight:600}
+.tbx-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--or)}
+.tbx-wrap{margin:0 0 8px}
+.tbx-wrap textarea{width:100%;padding:6px 8px;font-size:12px;border:1px solid var(--bd);border-radius:6px;resize:vertical;min-height:44px;font-family:inherit;color:var(--dk);outline:none}
+.tbx-wrap textarea:focus{border-color:#a1a1aa}
+
 /* Info pills */
 .ibar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:7px 10px;background:#fff;border-radius:6px;border:1px solid var(--bd)}
 .ipill{display:inline-flex;align-items:center;gap:5px;background:#f4f4f5;border:1px solid var(--bd);border-radius:20px;padding:3px 10px;font-size:10px;color:var(--gy)}
@@ -326,6 +338,7 @@ tfoot tr.fs-net td.row-lbl{font-weight:700;font-size:12px}
         <div class="is-row"><label>Email</label><input id="is_email" placeholder="e.g. info@youmiqi.com"></div>
       </div>
       <div class="is-row"><label>Invoice Footer Note (optional)</label><input id="is_footer" placeholder="e.g. Thank you for dining with us!"></div>
+      <div id="is_inputs"></div>
     </div>
     <div class="is-foot">
       <button class="btn btn-g" style="font-size:12px;padding:6px 14px" onclick="closeInvSettings()">Cancel</button>
@@ -381,7 +394,7 @@ tfoot tr.fs-net td.row-lbl{font-weight:700;font-size:12px}
 
 <script src="/datepicker.js?v=6"></script>
 <script src="/quota-meter.js?v=1"></script>
-<script src="/invoice-template.js?v=11"></script>
+<script src="/invoice-template.js?v=19"></script>
 <script>
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const TOKEN = sessionStorage.getItem('merchantToken');
@@ -803,6 +816,7 @@ function buildDetail(t) {
       <tbody>${irows}${arows}</tbody>
     </table>
     <div class="ibar-row">${tpill}${kpill}${rpill}${ppills}</div>
+    ${inputBoxesHtml(uid)}
     <div style="margin-top:10px">
       <label style="font-size:11px;color:#71717a;font-weight:600;display:block;margin-bottom:4px">Additional Remark (optional — yours, not from Pospal)</label>
       <textarea id="remark_${uid}" placeholder="Add an additional remark for this invoice…" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid #e4e4e7;border-radius:6px;resize:vertical;min-height:52px;font-family:inherit;color:#18181b;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='#a1a1aa'" onblur="this.style.borderColor='#e4e4e7'"></textarea>
@@ -923,7 +937,25 @@ async function openInvSettings() {
   });
   const stEl = document.getElementById('is_state');
   if (stEl) stEl.value = s.state || '';
+  renderInputDefaults(s);
   document.getElementById('isOverlay').classList.add('open');
+}
+
+// TextBox blocks (added by the admin) get a default-content editor here; the
+// merchant can still change the text per invoice before printing.
+function renderInputDefaults(s) {
+  const wrap = document.getElementById('is_inputs');
+  if (!wrap) return;
+  const boxes = (s.blocks || []).filter(b => b && b.type === 'input' && b.show !== false);
+  if (!boxes.length) { wrap.innerHTML = ''; return; }
+  const inputs = s.inputs || {};
+  wrap.innerHTML = `<div style="margin-top:4px;padding-top:12px;border-top:1px solid var(--bd);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gy)">Invoice Text Boxes</div>` +
+    boxes.map(b => {
+      const title = ((b.opts && b.opts.title) || '').trim() || 'TextBox';
+      return `<div class="is-row" style="margin-top:10px"><label>${esc(title)}</label>
+        <textarea id="isbx_${esc(b.id)}" placeholder="Default content for every invoice (editable per invoice)"
+          style="border:1px solid var(--bd);border-radius:6px;padding:7px 10px;font-size:13px;font-family:inherit;resize:vertical;min-height:52px;outline:none;width:100%">${esc(inputs[b.id] || '')}</textarea></div>`;
+    }).join('');
 }
 function closeInvSettings() {
   document.getElementById('isOverlay').classList.remove('open');
@@ -934,6 +966,14 @@ async function saveInvSettings() {
     const el = document.getElementById('is_' + k);
     if (el) s[k] = el.value.trim();
   });
+  // TextBox defaults — only send this key when the template has boxes, so a
+  // merchant with none never posts an empty object over admin-side data.
+  const boxes = (_invSettings.blocks || []).filter(b => b && b.type === 'input');
+  if (boxes.length) {
+    const inputs = {};
+    boxes.forEach(b => { const el = document.getElementById('isbx_' + b.id); if (el) inputs[b.id] = el.value.trim(); });
+    s.inputs = inputs;
+  }
   const btn = document.querySelector('#isOverlay .btn-p');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
@@ -944,16 +984,64 @@ async function saveInvSettings() {
     });
     const d = await resp.json();
     if (!d.ok) { alert('Failed to save. Please try again.'); return; }
-    _invSettings = s;
+    // Merge, don't replace: keep the admin-managed template (blocks, el, accent)
+    // in the local cache so invoices keep their layout until the next reload.
+    _invSettings = Object.assign({}, _invSettings, s);
   } catch(e) { alert('Failed to save. Please try again.'); return; }
   finally { if (btn) { btn.disabled = false; btn.textContent = 'Save Settings'; } }
   closeInvSettings();
 }
 
+// ── Invoice TextBoxes (admin-defined title, merchant-filled content) ──────────
+// The detail panel shows one editor per TextBox, prefilled with the saved default;
+// edits here apply to this invoice only. collectInputs() returns {blockId: text}.
+// Compact checklist: each TextBox is a Title + checkbox. Ticking reveals its
+// input (prefilled with the merchant default) and includes it on this invoice;
+// unticked boxes stay hidden. Keeps the panel tidy when there are many boxes.
+function inputBoxesHtml(uid) {
+  const s = getInvSettings();
+  const boxes = (s.blocks || []).filter(b => b && b.type === 'input' && b.show !== false);
+  if (!boxes.length) return '';
+  const defs = s.inputs || {};
+  const rows = boxes.map(b => {
+    const title = ((b.opts && b.opts.title) || '').trim() || 'TextBox';
+    const bid = esc(b.id);
+    return `<div class="tbx-item">
+      <label class="tbx-row">
+        <span class="tbx-title">${esc(title)}</span>
+        <input type="checkbox" id="tbxck_${bid}_${uid}" onchange="toggleTbx('${bid}','${uid}',this.checked)">
+      </label>
+      <div id="tbxwrap_${bid}_${uid}" class="tbx-wrap" style="display:none">
+        <textarea id="tbx_${bid}_${uid}" placeholder="Content for this invoice…">${esc(defs[b.id] || '')}</textarea>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="tbx-list"><div class="tbx-head">Invoice Text Boxes <span class="tbx-hint">tick to include on this invoice</span></div>${rows}</div>`;
+}
+function toggleTbx(bid, uid, on) {
+  const w = document.getElementById('tbxwrap_' + bid + '_' + uid);
+  if (!w) return;
+  w.style.display = on ? 'block' : 'none';
+  if (on) { const ta = document.getElementById('tbx_' + bid + '_' + uid); if (ta) ta.focus(); }
+}
+function collectInputs(uid) {
+  const inputs = {};
+  (getInvSettings().blocks || []).forEach(b => {
+    if (b && b.type === 'input') {
+      const ck = document.getElementById('tbxck_' + b.id + '_' + uid);
+      const el = document.getElementById('tbx_' + b.id + '_' + uid);
+      // ticked → the typed content; unticked → '' so it overrides the saved
+      // default and the box stays off this invoice.
+      inputs[b.id] = (ck && ck.checked && el) ? el.value : '';
+    }
+  });
+  return inputs;
+}
+
 // ── Build Invoice HTML (shared engine: /invoice-template.js) ──────────────────
-function buildInvoiceHtml(t, autoprint, remark='', member=null) {
+function buildInvoiceHtml(t, autoprint, remark='', member=null, inputs=null) {
   const fallbackName = document.getElementById('merchantName').textContent || '3FS Technology';
-  return InvoiceTemplate.build(t, getInvSettings(), {autoprint, remark, member, PM, fallbackName});
+  return InvoiceTemplate.build(t, getInvSettings(), {autoprint, remark, member, inputs, PM, fallbackName});
 }
 
 // ── Fetch member helper ───────────────────────────────────────────────────────
@@ -975,8 +1063,9 @@ async function printInvoice(uid) {
   if (!w) { alert('Please allow popups to print invoices.'); return; }
   w.document.write('<p style="font-family:Arial;padding:40px;color:#71717a">Loading invoice…</p>');
   const remark = ((document.getElementById('remark_' + uid) || {}).value || '').trim();
+  const inputs = collectInputs(uid);
   const member = await fetchMember(t);
-  const html = buildInvoiceHtml(t, true, remark, member);
+  const html = buildInvoiceHtml(t, true, remark, member, inputs);
   w.document.open(); w.document.write(html); w.document.close();
 }
 
@@ -1003,7 +1092,7 @@ async function waInvoice(uid, remark='') {
   // Upload invoice HTML to server, get shareable link (valid 24h)
   let invLink = '';
   try {
-    const html = buildInvoiceHtml(t, false, remark, member);
+    const html = buildInvoiceHtml(t, false, remark, member, collectInputs(uid));
     const resp = await fetch('/api/invoice-html', {
       method: 'POST',
       headers: {'Content-Type': 'application/json', ...hdr()},

@@ -26,9 +26,12 @@ window.InvoiceTemplate = (function () {
   }
 
   // ── Blocks ──────────────────────────────────────────────────────────────────
-  const BLOCK_TYPES = ['header', 'meta', 'items', 'totals', 'payment', 'footer', 'text', 'divider', 'spacer'];
+  // 'input' = TextBox: the admin sets its title, the merchant fills in the content
+  // on the Report page (default in settings.inputs[blockId], editable per invoice).
+  const BLOCK_TYPES = ['header', 'meta', 'items', 'totals', 'payment', 'footer', 'text', 'divider', 'spacer', 'input'];
   const BLOCK_NAMES = {header: 'Header', meta: 'Info Fields', items: 'Items Table', totals: 'Totals',
-                       payment: 'Payment Method', footer: 'Footer', text: 'Text', divider: 'Divider', spacer: 'Spacer'};
+                       payment: 'Payment Method', footer: 'Footer', text: 'Text', divider: 'Divider', spacer: 'Spacer',
+                       input: 'TextBox'};
 
   // Placeholder variables usable inside Text blocks and element overrides
   const PLACEHOLDERS = ['invoice_no', 'date', 'time', 'cashier', 'table', 'member_name', 'member_phone',
@@ -49,6 +52,116 @@ window.InvoiceTemplate = (function () {
     footer:  [['pos_remark', 'Transaction Remark'], ['reg_note', 'Tax Note'],
               ['footer_text', 'Footer Text']],
   };
+
+  // Per-block fields shown as chips in the editor, in default render order.
+  //   k     — order key (also the element key toggled via el[k].show unless opt is set)
+  //   opt   — visibility lives in block.opts[opt] instead (def = default when unset)
+  //   g     — group: fields can only be reordered within the same group
+  //   fixed — keeps its place (not reorderable)
+  // The admin's custom order is stored per block as opts.order = [k, ...].
+  const BLOCK_FIELDS = {
+    header:  [{k: 'co_name', l: 'Company Name', g: 'co'}, {k: 'co_info', l: 'Company Details', g: 'co'},
+              {k: 'co_regs', l: 'SSM / SST', g: 'co'},
+              {k: 'title', l: 'Title', g: 'doc'}, {k: 'inv_no', l: 'Invoice No', g: 'doc'},
+              {k: 'inv_date', l: 'Invoice Date', g: 'doc'}],
+    meta:    [{k: 'invoice_no', l: 'Invoice No', opt: 'invoice_no', def: false},
+              {k: 'date', l: 'Date', opt: 'date', def: false},
+              {k: 'cashier', l: 'Cashier', opt: 'cashier', def: true},
+              {k: 'table', l: 'Table', opt: 'table', def: true},
+              {k: 'member', l: 'Member', opt: 'member', def: true},
+              {k: 'points', l: 'Points', opt: 'points', def: true}],
+    items:   [{k: 'th_qty', l: 'Qty'}, {k: 'th_price', l: 'Unit Price'}, {k: 'th_amount', l: 'Amount'},
+              {k: 'th_disc', l: 'Discount', opt: 'discount', def: true},
+              {k: 'item_remark', l: 'Item Remark', fixed: true}],
+    totals:  [{k: 'tot_subtotal_lbl', l: 'Subtotal', opt: 'subtotal', def: true},
+              {k: 'tot_discount_lbl', l: 'Discount'}, {k: 'tot_service_lbl', l: 'Service Charge'},
+              {k: 'tot_rounding_lbl', l: 'Rounding'}, {k: 'tot_tax_lbl', l: 'Tax'},
+              {k: 'tot_total_lbl', l: 'Total', fixed: true}],
+    payment: [{k: 'pay_lbl', l: 'Label'}, {k: 'pay_items', l: 'Amounts'}],
+    footer:  [{k: 'reg_note', l: 'Tax Note'}, {k: 'pos_remark', l: 'Transaction Remark'},
+              {k: 'footer_text', l: 'Footer Text'}],
+  };
+  const FIELD_GROUPS = {co: 'Company', doc: 'Title'};
+
+  // Fields the admin can add to Info Fields / Totals (opts.extra):
+  //   data field   {k: src, src}            — value comes from the transaction
+  //   custom field {k: 'c…', label, value}  — admin's own label + fixed value ({variables} allowed)
+  const EXTRA_DATA = {
+    meta:    [['time', 'Time'], ['member_name', 'Member Name'], ['member_phone', 'Member Phone'],
+              ['balance', 'Balance'], ['items_count', 'Items Count'], ['qty_total', 'Total Qty'],
+              ['ticket_remark', 'Ticket Remark'], ['subtotal', 'Subtotal'], ['total', 'Total']],
+    totals:  [['items_count', 'Items Count'], ['qty_total', 'Total Qty']],
+    header:  [['phone', 'Phone'], ['email', 'Email'], ['address', 'Address'],
+              ['invoice_no', 'Invoice No'], ['date', 'Date'], ['time', 'Time']],
+    payment: [['total', 'Total Paid'], ['date', 'Date'], ['time', 'Time']],
+    footer:  [['company_name', 'Company Name'], ['phone', 'Phone'], ['email', 'Email'],
+              ['address', 'Address'], ['total', 'Total'], ['ticket_remark', 'Ticket Remark']],
+    items:   [['barcode', 'Barcode']],   // per-item column; items takes no custom field
+  };
+  // Where a block's added fields live (group, for reorder) and their key prefix
+  // (so keys never clash across blocks or with built-ins).
+  const EXTRA_GROUP  = {header: 'co'};
+  const EXTRA_PREFIX = {totals: 'tx_', header: 'hx_', payment: 'px_', footer: 'fx_', items: 'ix_'};
+  const EXTRA_KEY_RE = /^[a-z0-9_]{1,20}$/;
+  function extras(type, o) {
+    const data = (EXTRA_DATA[type] || []).map(d => d[0]);
+    const builtin = (BLOCK_FIELDS[type] || []).map(f => f.k);
+    const seen = {};
+    return (Array.isArray(o && o.extra) ? o.extra : []).filter(e => {
+      if (!e || typeof e.k !== 'string' || !EXTRA_KEY_RE.test(e.k) || seen[e.k] || builtin.includes(e.k)) return false;
+      if (e.src ? !data.includes(e.src) : typeof e.label !== 'string') return false;
+      return (seen[e.k] = true);
+    });
+  }
+  // Order key of an added field (per-block prefix keeps keys unique)
+  const extraKey = (type, e) => (EXTRA_PREFIX[type] || '') + e.k;
+  const extraLabel = (type, e) => e.src ? ((EXTRA_DATA[type] || []).find(d => d[0] === e.src) || [, e.src])[1] : e.label;
+  // Built-in fields + added fields of a block, as {k, l, g, extra}
+  function blockFields(type, o) {
+    const g = EXTRA_GROUP[type] || '';
+    return (BLOCK_FIELDS[type] || []).concat(extras(type, o).map(e =>
+      ({k: extraKey(type, e), l: extraLabel(type, e), g, extra: e})));
+  }
+  // Row data of an added field, or null when it has nothing to show
+  function extraRow(type, e, c, valKey) {
+    if (e.src) {
+      const v = e.src === 'ticket_remark' ? c.posRemark : c.vars[e.src];
+      const val = v == null ? '' : String(v);
+      return val ? {lbl: extraLabel(type, e), val} : null;
+    }
+    const tpl = (c.el[valKey] || {}).text || e.value || '';
+    if (!c.edit && !subst(tpl, c.vars).replace(/<br>/g, '').trim()) return null;
+    return {lbl: e.label, custom: true, tpl: e.value || ''};
+  }
+
+  // Reorderable keys of a block in display order: the saved opts.order (unknown
+  // / duplicate keys dropped), then any fields it doesn't mention, in default order.
+  function fieldOrder(type, o) {
+    const known = blockFields(type, o).filter(f => !f.fixed).map(f => f.k);
+    const saved = Array.isArray(o && o.order)
+      ? o.order.filter((k, i, a) => known.includes(k) && a.indexOf(k) === i) : [];
+    return saved.concat(known.filter(k => !saved.includes(k)));
+  }
+  function fieldGroup(type, k, o) {
+    const f = blockFields(type, o).find(x => x.k === k);
+    return (f && f.g) || '';
+  }
+  // One labeled line for a header / payment / footer added field (or '' if empty).
+  // The wrapper carries data-ord so it can be reordered on the preview.
+  function extraLine(type, e, c, opts) {
+    opts = opts || {};
+    const key = extraKey(type, e);
+    if ((c.el['f_' + key] || {}).show === false) return '';
+    const r = extraRow(type, e, c, 'val_' + key);
+    if (!r) return '';
+    const lbl = E(c, 'lbl_' + key, r.lbl + ' · Label', r.lbl, null, {tag: 'span', style: 'font-weight:600;'});
+    const val = r.custom ? E(c, 'val_' + key, r.lbl + ' · Value', r.tpl, null, {tag: 'span'})
+                         : E(c, 'val_' + key, r.lbl + ' · Value', '', esc(r.val), {tag: 'span', text: false});
+    const od = c.edit ? ` data-ord="${key}"${opts.og ? ` data-og="${opts.og}"` : ''}` : '';
+    return `<div${od} style="${opts.style || ''}">${lbl}: ${val}</div>`;
+  }
+  // Edit-mode attributes marking a reorderable unit for the preview's drag grip
+  const ordA = (c, k, g) => c.edit ? ` data-ord="${k}"${g ? ` data-og="${g}"` : ''}` : '';
 
   // Default template = the classic design; legacy show_* toggles map onto it.
   function defaultBlocks(s) {
@@ -102,8 +215,11 @@ window.InvoiceTemplate = (function () {
       items_count: items.length, qty_total: items.reduce((sm, i) => sm + (parseFloat(i.quantity) || 0), 0),
       remark: remark, ticket_remark: posRemark,
     };
+    // TextBox content: saved per-merchant defaults (s.inputs) merged with any
+    // per-invoice overrides passed in opts.inputs (the Report page print flow).
+    const inputs = Object.assign({}, s.inputs || {}, opts.inputs || {});
     return {t, s, el: s.el || {}, edit: !!opts.edit, member, remark, posRemark, dateStr, tp,
-            tax, svc, rnd, disc, net, gross, accent, title, merch, addrParts, vars, PM: opts.PM || {}};
+            tax, svc, rnd, disc, net, gross, accent, title, merch, addrParts, vars, inputs, PM: opts.PM || {}};
   }
 
   // Substitute {placeholder} vars in user text (escaped, newlines → <br>)
@@ -145,7 +261,8 @@ window.InvoiceTemplate = (function () {
     if ((o.width || o.height) && tag === 'span') st += 'display:inline-block;vertical-align:top;';
     const raw = (textEditable && o.text) ? o.text : (defText || '');
     const ed  = c.edit ? ` data-en="${escA(name)}" data-ed="${escA(raw)}" data-et="${textEditable ? 1 : 0}" data-ot="${(textEditable && o.text) ? 1 : 0}"` : '';
-    return `<${tag} data-el="${key}"${cls}${st ? ` style="${st}"` : ''}${ed}>${html}</${tag}>`;
+    const od  = opts.ord ? ordA(c, opts.ord, opts.og) : '';
+    return `<${tag} data-el="${key}"${cls}${st ? ` style="${st}"` : ''}${ed}${od}>${html}</${tag}>`;
   }
 
   // ── Block renderers ─────────────────────────────────────────────────────────
@@ -162,28 +279,58 @@ window.InvoiceTemplate = (function () {
     const regsHtml = `${s.ssm ? '<span><strong>SSM:</strong> ' + esc(s.ssm) + '</span>' : ''}` +
       `${s.sst ? '<span><strong>SST Reg:</strong> ' + esc(s.sst) + '</span>' : ''}`;
     const regsText = [s.ssm ? 'SSM: ' + s.ssm : '', s.sst ? 'SST Reg: ' + s.sst : ''].filter(Boolean).join('   ');
-    const invNo   = E(c, 'inv_no',   'Invoice No',   'No: {invoice_no}',   null, {tag: 'div', cls: 'inv-no'});
-    const invDate = E(c, 'inv_date', 'Invoice Date', 'Date: {date} · {time}', null, {tag: 'div', cls: 'inv-date'});
-    if (o.layout === 'center') {
-      return `<div style="text-align:center;margin-bottom:4px;padding-bottom:14px;border-bottom:2px solid ${c.accent}">
-        ${E(c, 'co_name', 'Company Name', '{company_name}', null, {tag: 'div', cls: 'co-name', style: 'font-size:18px;'})}
-        ${E(c, 'co_info', 'Company Details', infoText, infoHtml, {tag: 'div', cls: 'co-info'})}
-        ${(regsText || c.el.co_regs) ? E(c, 'co_regs', 'Registration Nos', regsText, regsHtml, {tag: 'div', style: 'margin-top:4px;font-size:10px;color:#52525b;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;'}) : ''}
-        ${E(c, 'title', 'Document Title', c.title, null, {tag: 'h1', style: 'font-size:22px;font-weight:800;letter-spacing:.5px;margin-top:12px;'})}
-        <div style="font-size:11px;color:#71717a;margin-top:4px;font-family:monospace">${E(c, 'inv_no', 'Invoice No', 'No: {invoice_no}')} · ${E(c, 'inv_date', 'Invoice Date', 'Date: {date} · {time}')}</div>
+    const ctr = o.layout === 'center';
+    const hasRegs = !!(regsText || c.el.co_regs);
+    const co = {
+      co_name: () => E(c, 'co_name', 'Company Name', '{company_name}', null,
+        {tag: 'div', cls: 'co-name', style: ctr ? 'font-size:20px;letter-spacing:.3px;margin-bottom:6px;' : '', ord: 'co_name', og: 'co'}),
+      co_info: () => E(c, 'co_info', 'Company Details', infoText, infoHtml,
+        {tag: 'div', cls: 'co-info', ord: 'co_info', og: 'co'}),
+      co_regs: () => hasRegs ? E(c, 'co_regs', 'Registration Nos', regsText, regsHtml, {tag: 'div', ord: 'co_regs', og: 'co',
+        style: ctr ? 'margin-top:4px;font-size:10px;color:#52525b;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;'
+                   : 'margin-top:8px;font-size:10px;color:#52525b;display:flex;gap:16px;flex-wrap:wrap;'}) : '',
+    };
+    extras('header', o).forEach(e => {
+      const key = extraKey('header', e);
+      co[key] = () => extraLine('header', e, c, {og: 'co',
+        style: 'font-size:11px;color:#52525b;margin-top:' + (ctr ? '3px' : '4px') + ';'});
+    });
+    const ord = fieldOrder('header', o);
+    const coHtml = ord.filter(k => co[k]).map(k => co[k]()).join('');
+    const docKeys = ord.filter(k => fieldGroup('header', k, o) === 'doc');
+    if (ctr) {
+      // Centered receipt look: company block on top, a hairline, then the title
+      // (uppercase, spaced) with a muted No · Date line beneath it.
+      const lineE = k => k === 'inv_no'
+        ? E(c, 'inv_no', 'Invoice No', 'No: {invoice_no}', null, {ord: 'inv_no', og: 'doc'})
+        : E(c, 'inv_date', 'Invoice Date', 'Date: {date} · {time}', null, {ord: 'inv_date', og: 'doc'});
+      let doc = '', run = [];
+      const flush = () => {
+        const parts = run.filter(Boolean);
+        if (parts.length) doc += `<div style="font-size:11px;color:#71717a;margin-top:6px;letter-spacing:.3px">${parts.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>`;
+        run = [];
+      };
+      docKeys.forEach(k => {
+        if (k === 'title') {
+          flush();
+          doc += E(c, 'title', 'Document Title', c.title, null, {tag: 'h1', ord: 'title', og: 'doc',
+            style: 'font-size:18px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#18181b;margin:0;'});
+        } else run.push(lineE(k));
+      });
+      flush();
+      const docBlock = doc ? `<div style="margin-top:14px;padding-top:13px;border-top:1px solid #ececef">${doc}</div>` : '';
+      return `<div class="inv-hdr-ctr" style="text-align:center;padding-bottom:16px;border-bottom:2px solid ${c.accent}">
+        ${coHtml}${docBlock}
       </div>`;
     }
+    const docE = {
+      title:    () => E(c, 'title', 'Document Title', c.title, null, {tag: 'h1', ord: 'title', og: 'doc'}),
+      inv_no:   () => E(c, 'inv_no', 'Invoice No', 'No: {invoice_no}', null, {tag: 'div', cls: 'inv-no', ord: 'inv_no', og: 'doc'}),
+      inv_date: () => E(c, 'inv_date', 'Invoice Date', 'Date: {date} · {time}', null, {tag: 'div', cls: 'inv-date', ord: 'inv_date', og: 'doc'}),
+    };
     return `<div class="inv-hdr">
-      <div>
-        ${E(c, 'co_name', 'Company Name', '{company_name}', null, {tag: 'div', cls: 'co-name'})}
-        ${E(c, 'co_info', 'Company Details', infoText, infoHtml, {tag: 'div', cls: 'co-info'})}
-        ${(regsText || c.el.co_regs) ? E(c, 'co_regs', 'Registration Nos', regsText, regsHtml, {tag: 'div', style: 'margin-top:8px;font-size:10px;color:#52525b;display:flex;gap:16px;flex-wrap:wrap;'}) : ''}
-      </div>
-      <div class="inv-title">
-        ${E(c, 'title', 'Document Title', c.title, null, {tag: 'h1'})}
-        ${invNo}
-        ${invDate}
-      </div>
+      <div>${coHtml}</div>
+      <div class="inv-title">${docKeys.map(k => docE[k]()).join('')}</div>
     </div>`;
   }
 
@@ -196,7 +343,13 @@ window.InvoiceTemplate = (function () {
     if (o.member  !== false && c.member)  rows.push({key: 'member',  lbl: 'Member',  val: (v.member_name || v.member_phone || '—') + (v.member_name && v.member_phone ? ' · ' + v.member_phone : ''), accent: true});
     if (o.points  !== false && c.member && (c.member.point != null || c.member.balance != null))
       rows.push({key: 'points', lbl: 'Points / Balance', val: [c.member.point != null ? c.member.point + ' pts' : '', v.balance].filter(Boolean).join(' · ')});
-    return rows;
+    extras('meta', o).forEach(e => {
+      if ((c.el['f_' + e.k] || {}).show === false) return;
+      const r = extraRow('meta', e, c, 'val_' + e.k);
+      if (r) rows.push(Object.assign({key: e.k}, r));
+    });
+    const ord = fieldOrder('meta', o);
+    return rows.sort((a, b) => ord.indexOf(a.key) - ord.indexOf(b.key));
   }
 
   function renderMeta(o, c) {
@@ -204,14 +357,16 @@ window.InvoiceTemplate = (function () {
     if (!rows.length) return '';
     const lblE = r => E(c, 'lbl_' + r.key, r.lbl + ' · Label', r.lbl, null,
       {tag: 'div', cls: 'lbl', style: r.accent ? `color:${c.accent};` : ''});
-    const valE = (r, extra) => E(c, 'val_' + r.key, r.lbl + ' · Value', '', esc(r.val),
-      {tag: 'div', cls: 'val', text: false, style: extra || ''});
+    // Custom fields carry a typed value template ({variables} allowed) → text-editable
+    const valE = (r, extra, tag, cls) => r.custom
+      ? E(c, 'val_' + r.key, r.lbl + ' · Value', r.tpl, null, {tag, cls, style: extra || ''})
+      : E(c, 'val_' + r.key, r.lbl + ' · Value', '', esc(r.val), {tag, cls, text: false, style: extra || ''});
     if (o.style === 'lines') {
       return `<div style="font-size:12px;line-height:2">${rows.map(r =>
-        `<div style="display:flex;gap:6px;align-items:baseline">${E(c, 'lbl_' + r.key, r.lbl + ' · Label', r.lbl, null, {style: 'color:#71717a;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;'})}${E(c, 'val_' + r.key, r.lbl + ' · Value', '', esc(r.val), {text: false, style: 'font-weight:700;'})}</div>`).join('')}</div>`;
+        `<div style="display:flex;gap:6px;align-items:baseline"${ordA(c, r.key)}>${E(c, 'lbl_' + r.key, r.lbl + ' · Label', r.lbl, null, {style: 'color:#71717a;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;'})}${valE(r, 'font-weight:700;', 'span')}</div>`).join('')}</div>`;
     }
     return `<div class="meta-grid">${rows.map(r =>
-      `<div class="meta-item"${r.accent ? ` style="border-left:2px solid ${c.accent};padding-left:10px"` : ''}>${lblE(r)}${valE(r)}</div>`).join('')}</div>`;
+      `<div class="meta-item"${r.accent ? ` style="border-left:2px solid ${c.accent};padding-left:10px"` : ''}${ordA(c, r.key)}>${lblE(r)}${valE(r, '', 'div', 'val')}</div>`).join('')}</div>`;
   }
 
   function renderItems(o, c) {
@@ -219,16 +374,34 @@ window.InvoiceTemplate = (function () {
     const showQty = !off('th_qty'), showPrice = !off('th_price'), showAmt = !off('th_amount');
     const showDisc = o.discount !== false && !off('th_disc');
     const showItemRmk = !off('item_remark');
+    // Description stays the first column; the rest follow the block's field order.
+    const COLS = {
+      th_qty:    {on: showQty,   name: 'Qty',        w: 44, td: r => `<td class="r">${r.i.quantity}</td>`},
+      th_price:  {on: showPrice, name: 'Unit Price', w: 88, td: r => `<td class="r">${fm(r.i.sellPrice || 0)}</td>`},
+      th_amount: {on: showAmt,   name: 'Amount',     w: 88, td: r => `<td class="r">${fm(r.act)}</td>`},
+      th_disc:   {on: showDisc,  name: 'Discount',   w: 76, td: r =>
+        `<td class="r" style="color:${r.dis > 0.005 ? '#dc2626' : '#a1a1aa'}">${r.dis > 0.005 ? fm(r.dis) : '—'}</td>`},
+    };
+    // Admin-added columns (currently just Barcode): one cell per item.
+    extras('items', o).forEach(e => {
+      const key = extraKey('items', e);
+      COLS[key] = {on: !off('f_' + key), name: extraLabel('items', e), w: 90,
+        td: r => `<td class="r" style="font-family:inherit">${e.src === 'barcode' ? esc((r.i.productBarcode || '').trim() || '—') : ''}</td>`};
+    });
+    const cols = fieldOrder('items', o).filter(k => COLS[k] && COLS[k].on);
     const irows = (c.t.items || []).map(i => {
       const act = r2(i.totalAmount || 0);
       const dis = r2(r2((i.sellPrice || 0) * (i.quantity || 0)) - act);
       const rmk = showItemRmk ? (i.remark || '').trim() : '';
       const desc = esc(i.name || '—') +
         (rmk ? `<div style="font-size:9.5px;color:#a16207;margin-top:1px">${esc(rmk)}</div>` : '');
-      return `<tr><td>${desc}</td>${showQty ? `<td class="r">${i.quantity}</td>` : ''}${showPrice ? `<td class="r">${fm(i.sellPrice || 0)}</td>` : ''}${showAmt ? `<td class="r">${fm(act)}</td>` : ''}${showDisc ? `<td class="r" style="color:${dis > 0.005 ? '#dc2626' : '#a1a1aa'}">${dis > 0.005 ? fm(dis) : '—'}</td>` : ''}</tr>`;
+      const row = {i, act, dis};
+      return `<tr><td>${desc}</td>${cols.map(k => COLS[k].td(row)).join('')}</tr>`;
     }).join('');
+    const ths = cols.map(k => E(c, k, 'Column · ' + COLS[k].name, COLS[k].name, null,
+      {tag: 'th', cls: 'r', style: `width:${COLS[k].w}px;`, ord: k})).join('');
     return `<table>
-      <thead><tr>${E(c, 'th_desc', 'Column · Description', 'Description', null, {tag: 'th'})}${showQty ? E(c, 'th_qty', 'Column · Qty', 'Qty', null, {tag: 'th', cls: 'r', style: 'width:44px;'}) : ''}${showPrice ? E(c, 'th_price', 'Column · Unit Price', 'Unit Price', null, {tag: 'th', cls: 'r', style: 'width:88px;'}) : ''}${showAmt ? E(c, 'th_amount', 'Column · Amount', 'Amount', null, {tag: 'th', cls: 'r', style: 'width:88px;'}) : ''}${showDisc ? E(c, 'th_disc', 'Column · Discount', 'Discount', null, {tag: 'th', cls: 'r', style: 'width:76px;'}) : ''}</tr></thead>
+      <thead><tr>${E(c, 'th_desc', 'Column · Description', 'Description', null, {tag: 'th'})}${ths}</tr></thead>
       ${E(c, 'items_rows', 'Item Rows', '', irows, {tag: 'tbody', text: false})}
     </table>`;
   }
@@ -237,31 +410,57 @@ window.InvoiceTemplate = (function () {
     const off = k => (c.el[k] || {}).show === false;
     const lbl = (key, name, def) => E(c, key, name + ' · Label', def, null, {cls: 'lbl'});
     const val = (key, name, html, extra) => E(c, key, name + ' · Value', '', html, {cls: 'val', text: false, style: extra || ''});
+    const ROWS = {
+      tot_subtotal_lbl: () => o.subtotal !== false && !off('tot_subtotal_lbl') ? `<div class="trow" style="border-bottom:1px dashed #d4d4d8;padding-bottom:8px;margin-bottom:4px"${ordA(c, 'tot_subtotal_lbl')}>${E(c, 'tot_subtotal_lbl', 'Subtotal · Label', 'Subtotal', null, {cls: 'lbl', style: 'font-weight:600;color:#52525b;'})}${val('tot_subtotal_val', 'Subtotal', 'RM ' + fm(c.gross))}</div>` : '',
+      tot_discount_lbl: () => c.disc > 0.005 && !off('tot_discount_lbl') ? `<div class="trow"${ordA(c, 'tot_discount_lbl')}>${lbl('tot_discount_lbl', 'Discount', 'Discount')}${val('tot_discount_val', 'Discount', '−RM ' + fm(c.disc), 'color:#dc2626;')}</div>` : '',
+      tot_service_lbl:  () => c.svc > 0.001 && !off('tot_service_lbl') ? `<div class="trow"${ordA(c, 'tot_service_lbl')}>${lbl('tot_service_lbl', 'Service Charge', 'Service Charge')}${val('tot_service_val', 'Service Charge', 'RM ' + fm(c.svc))}</div>` : '',
+      tot_rounding_lbl: () => Math.abs(c.rnd) > 0.001 && !off('tot_rounding_lbl') ? `<div class="trow"${ordA(c, 'tot_rounding_lbl')}>${lbl('tot_rounding_lbl', 'Rounding', 'Rounding')}${val('tot_rounding_val', 'Rounding', c.rnd > 0 ? '(' + fm(c.rnd) + ')' : '+' + fm(Math.abs(c.rnd)))}</div>` : '',
+      tot_tax_lbl:      () => c.tax > 0.001 && !off('tot_tax_lbl') ? `<div class="trow tax"${ordA(c, 'tot_tax_lbl')}>${lbl('tot_tax_lbl', 'Service Tax', 'Service Tax (SST)')}${val('tot_tax_val', 'Service Tax', 'RM ' + fm(c.tax), 'color:#0369a1;')}</div>` : '',
+    };
+    extras('totals', o).forEach(e => {
+      const k = extraKey('totals', e);
+      ROWS[k] = () => {
+        if ((c.el['f_' + k] || {}).show === false) return '';
+        const r = extraRow('totals', e, c, 'val_' + k);
+        if (!r) return '';
+        return `<div class="trow"${ordA(c, k)}>${E(c, 'lbl_' + k, r.lbl + ' · Label', r.lbl, null, {cls: 'lbl'})}${
+          r.custom ? E(c, 'val_' + k, r.lbl + ' · Value', r.tpl, null, {cls: 'val'})
+                   : E(c, 'val_' + k, r.lbl + ' · Value', '', esc(r.val), {cls: 'val', text: false})}</div>`;
+      };
+    });
+    // TOTAL is always the last row.
     return `<div class="totals-wrap"><div class="totals">
-      ${o.subtotal !== false && !off('tot_subtotal_lbl') ? `<div class="trow" style="border-bottom:1px dashed #d4d4d8;padding-bottom:8px;margin-bottom:4px">${E(c, 'tot_subtotal_lbl', 'Subtotal · Label', 'Subtotal', null, {cls: 'lbl', style: 'font-weight:600;color:#52525b;'})}${val('tot_subtotal_val', 'Subtotal', 'RM ' + fm(c.gross))}</div>` : ''}
-      ${c.disc > 0.005 && !off('tot_discount_lbl') ? `<div class="trow">${lbl('tot_discount_lbl', 'Discount', 'Discount')}${val('tot_discount_val', 'Discount', '−RM ' + fm(c.disc), 'color:#dc2626;')}</div>` : ''}
-      ${c.svc > 0.001 && !off('tot_service_lbl') ? `<div class="trow">${lbl('tot_service_lbl', 'Service Charge', 'Service Charge')}${val('tot_service_val', 'Service Charge', 'RM ' + fm(c.svc))}</div>` : ''}
-      ${Math.abs(c.rnd) > 0.001 && !off('tot_rounding_lbl') ? `<div class="trow">${lbl('tot_rounding_lbl', 'Rounding', 'Rounding')}${val('tot_rounding_val', 'Rounding', c.rnd > 0 ? '(' + fm(c.rnd) + ')' : '+' + fm(Math.abs(c.rnd)))}</div>` : ''}
-      ${c.tax > 0.001 && !off('tot_tax_lbl') ? `<div class="trow tax">${lbl('tot_tax_lbl', 'Service Tax', 'Service Tax (SST)')}${val('tot_tax_val', 'Service Tax', 'RM ' + fm(c.tax), 'color:#0369a1;')}</div>` : ''}
+      ${fieldOrder('totals', o).filter(k => ROWS[k]).map(k => ROWS[k]()).join('')}
       ${!off('tot_total_lbl') ? `<div class="trow tot">${E(c, 'tot_total_lbl', 'Total · Label', 'TOTAL')}${val('tot_total_val', 'Total', 'RM ' + fm(c.net), `color:${c.accent};`)}</div>` : ''}
     </div></div>`;
   }
 
   function renderPayment(o, c) {
     const pills = (c.t.payments || []).map(p => `<span class="pill">${esc(c.PM[p.code] || p.code)} · RM ${fm(p.amount || 0)}</span>`).join('');
+    const PARTS = {
+      pay_lbl:   () => E(c, 'pay_lbl', 'Payment · Label', 'Payment Method', null, {tag: 'div', cls: 'pay-lbl', ord: 'pay_lbl'}),
+      pay_items: () => E(c, 'pay_items', 'Payment · Values', '', pills, {tag: 'div', text: false, ord: 'pay_items'}),
+    };
+    const xm = {}; extras('payment', o).forEach(e => { xm[extraKey('payment', e)] = e; });
     return `<div class="pay-section">
-      ${E(c, 'pay_lbl', 'Payment · Label', 'Payment Method', null, {tag: 'div', cls: 'pay-lbl'})}
-      ${E(c, 'pay_items', 'Payment · Values', '', pills, {tag: 'div', text: false})}
+      ${fieldOrder('payment', o).map(k => PARTS[k] ? PARTS[k]()
+          : (xm[k] ? extraLine('payment', xm[k], c, {og: 'pay', style: 'font-size:12px;color:#52525b;margin-top:6px;'}) : '')).join('')}
     </div>`;
   }
 
   function renderFooter(o, c) {
     const s = c.s;
     const regDef = 'This is a tax invoice issued by {company_name}. SST Registration No: {sst}';
-    return `${(s.sst || (c.el.reg_note || {}).text) ? E(c, 'reg_note', 'Tax Note', regDef, null, {tag: 'div', cls: 'reg-note'}) : ''}
-      ${(c.posRemark && (c.el.pos_remark || {}).show !== false) ? `<div style="margin-bottom:12px;padding:10px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;font-size:12px;color:#78350f"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#b45309;display:block;margin-bottom:4px">Transaction Remark</span>${esc(c.posRemark)}</div>` : ''}
-      ${c.remark ? `<div style="margin-bottom:12px;padding:10px 12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;color:#334155"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#64748b;display:block;margin-bottom:4px">Additional Remark</span>${esc(c.remark)}</div>` : ''}
-      ${E(c, 'footer_text', 'Footer Text', s.footer || 'Thank you for your purchase!', null, {tag: 'div', cls: 'footer-note'})}`;
+    // The per-invoice Additional Remark always follows the Transaction Remark.
+    const PARTS = {
+      reg_note: () => (s.sst || (c.el.reg_note || {}).text) ? E(c, 'reg_note', 'Tax Note', regDef, null, {tag: 'div', cls: 'reg-note', ord: 'reg_note'}) : '',
+      pos_remark: () => `${(c.posRemark && (c.el.pos_remark || {}).show !== false) ? `<div style="margin-bottom:12px;padding:10px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;font-size:12px;color:#78350f"${ordA(c, 'pos_remark')}><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#b45309;display:block;margin-bottom:4px">Transaction Remark</span>${esc(c.posRemark)}</div>` : ''}
+      ${c.remark ? `<div style="margin-bottom:12px;padding:10px 12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;color:#334155"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#64748b;display:block;margin-bottom:4px">Additional Remark</span>${esc(c.remark)}</div>` : ''}`,
+      footer_text: () => E(c, 'footer_text', 'Footer Text', s.footer || 'Thank you for your purchase!', null, {tag: 'div', cls: 'footer-note', ord: 'footer_text'}),
+    };
+    const xm = {}; extras('footer', o).forEach(e => { xm[extraKey('footer', e)] = e; });
+    return fieldOrder('footer', o).map(k => PARTS[k] ? PARTS[k]()
+        : (xm[k] ? extraLine('footer', xm[k], c, {og: 'ft', style: 'font-size:11px;color:#71717a;margin-bottom:12px;'}) : '')).join('');
   }
 
   function renderText(o, c) {
@@ -270,6 +469,22 @@ window.InvoiceTemplate = (function () {
       `${o.bold ? 'font-weight:700;' : ''}${o.italic ? 'font-style:italic;' : ''}` +
       `color:${o.muted ? '#71717a' : '#18181b'};line-height:1.7`;
     return `<div style="${st}">${subst(o.text, c.vars)}</div>`;
+  }
+
+  // TextBox: the admin sets the title in /admin; the merchant types the content
+  // on the Report page (default per-merchant, editable per invoice). c.inputs[id]
+  // holds the resolved content. Empty content hides the whole block off-editor.
+  function renderInput(b, c) {
+    const o = b.opts || {};
+    const title = (o.title || '').trim();
+    const content = ((c.inputs || {})[b.id] || '').trim();
+    if (!c.edit && !content) return '';
+    const titleHtml = title
+      ? `<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#64748b;margin-bottom:4px">${esc(title)}</div>`
+      : '';
+    const body = content ? esc(content).replace(/\n/g, '<br>')
+      : (c.edit ? `<span style="color:#a1a1aa;font-style:italic">${esc(title || 'TextBox')} — filled in on the Report page</span>` : '');
+    return `<div style="padding:10px 12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;color:#334155">${titleHtml}${body}</div>`;
   }
 
   function renderBlock(b, c) {
@@ -281,6 +496,7 @@ window.InvoiceTemplate = (function () {
       case 'payment': return renderPayment(b.opts, c);
       case 'footer':  return renderFooter(b.opts, c);
       case 'text':    return renderText(b.opts, c);
+      case 'input':   return renderInput(b, c);
       case 'divider': return `<div style="border-top:1.5px ${b.opts.style === 'dashed' ? 'dashed' : 'solid'} #d4d4d8"></div>`;
       case 'spacer':  return `<div style="height:${Math.max(2, Math.min(120, parseInt(b.opts.height) || 16))}px"></div>`;
       default:        return '';
@@ -303,6 +519,15 @@ thead th[data-el]:hover{box-shadow:inset 0 0 0 999px rgba(255,255,255,.22)}
 thead th[data-el].el-sel{outline-color:#fff;box-shadow:inset 0 0 0 999px rgba(255,255,255,.32)}
 [data-el][contenteditable]:focus{outline:2px solid ${accent};outline-offset:1px;cursor:text}
 #ir-rsz{position:fixed;width:12px;height:12px;background:#fff;border:2px solid ${accent};border-radius:3px;cursor:nwse-resize;z-index:99;display:none;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+#ir-grip{position:fixed;width:16px;height:16px;display:none;align-items:center;justify-content:center;background:${accent};color:#fff;border-radius:4px;font-size:11px;line-height:1;cursor:grab;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.35);user-select:none;touch-action:none}
+#ir-grip.on{cursor:grabbing;opacity:0}
+#ir-ordline{position:fixed;display:none;background:${accent};border-radius:2px;z-index:99;pointer-events:none}
+[data-ord].ord-drag{opacity:.35}
+/* Hovering the grip outlines every field that reorders together with it. */
+[data-ord].ord-group{outline:1.5px dashed ${accent};outline-offset:2px;border-radius:3px}
+/* While dragging a field, hide decorative accent borders (e.g. the Member row's
+   left bar) so only the drop line reads as an orange line. */
+.ir-fdrag .meta-item{border-left-color:transparent!important}
 </style>
 <script>
 (function(){
@@ -340,11 +565,106 @@ thead th[data-el].el-sel{outline-color:#fff;box-shadow:inset 0 0 0 999px rgba(25
   }
   window.addEventListener('scroll',placeRsz,true);
   window.addEventListener('resize',placeRsz);
+  // Field reorder: hovering a [data-ord] unit shows a grip; dragging the grip
+  // moves that field among the units of the same block + group (data-og).
+  var grip=document.createElement('div');grip.id='ir-grip';grip.textContent='\\u283f';
+  grip.title='Drag to reorder';document.body.appendChild(grip);
+  var oline=document.createElement('div');oline.id='ir-ordline';document.body.appendChild(oline);
+  var gUnit=null,gHide=null,fd=null;
+  function groupUnits(u){
+    var b=u.closest('.blk'),g=u.dataset.og||'';
+    return b?[].slice.call(b.querySelectorAll('[data-ord]')).filter(function(x){return (x.dataset.og||'')===g;}):[];
+  }
+  // Horizontal when another unit of the group shares this unit's row
+  function inRow(u,list){
+    var r=u.getBoundingClientRect();
+    return list.some(function(x){return x!==u&&Math.abs(x.getBoundingClientRect().top-r.top)<6;});
+  }
+  // Outline just the field this grip will move, so the user knows what it grabs.
+  function clearGroupHi(){document.querySelectorAll('.ord-group').forEach(function(x){x.classList.remove('ord-group');});}
+  function showGroupHi(u){clearGroupHi();if(u)u.classList.add('ord-group');}
+  function placeGrip(){
+    if(!gUnit||!document.body.contains(gUnit)){gUnit=null;grip.style.display='none';return;}
+    var r=gUnit.getBoundingClientRect(),h=inRow(gUnit,groupUnits(gUnit));
+    grip.style.display='flex';
+    grip.style.left=Math.max(0,h?r.left+r.width/2-8:r.left-17)+'px';
+    grip.style.top=Math.max(0,h?r.top-17:r.top+Math.min(r.height,40)/2-8)+'px';
+  }
+  window.addEventListener('scroll',function(){if(!fd)placeGrip();},true);
+  document.addEventListener('mousemove',function(ev){
+    if(fd)return;
+    if(ev.target===grip){clearTimeout(gHide);return;}
+    var u=ev.target.closest&&ev.target.closest('[data-ord]');
+    if(u){clearTimeout(gHide);if(u!==gUnit){gUnit=u;placeGrip();}}
+    else if(gUnit){clearTimeout(gHide);gHide=setTimeout(function(){if(!fd){gUnit=null;placeGrip();}},300);}
+  });
+  document.addEventListener('mouseleave',function(){if(!fd){gUnit=null;placeGrip();}});
+  // Point at the grip → show which fields drag together; leaving it clears them.
+  grip.addEventListener('mouseenter',function(){if(gUnit)showGroupHi(gUnit);});
+  grip.addEventListener('mouseleave',function(){if(!fd)clearGroupHi();});
+  grip.addEventListener('pointerdown',function(ev){
+    if(!gUnit||ev.button!==0)return;
+    ev.preventDefault();ev.stopPropagation();
+    fd={u:gUnit,list:groupUnits(gUnit),tgt:null,after:false};
+    gUnit.classList.add('ord-drag');grip.classList.add('on');
+    showGroupHi(gUnit);
+    document.documentElement.classList.add('ir-fdrag');
+    try{grip.setPointerCapture(ev.pointerId);}catch(e){}
+  });
+  grip.addEventListener('pointermove',function(ev){
+    if(!fd)return;
+    grip.style.left=(ev.clientX-8)+'px';grip.style.top=(ev.clientY-8)+'px';
+    // nearest unit of the group (the dragged one itself = drop back in place)
+    var best=null,bd=1e12;
+    fd.list.forEach(function(x){
+      var r=x.getBoundingClientRect();
+      var dx=Math.max(r.left-ev.clientX,0,ev.clientX-r.right),dy=Math.max(r.top-ev.clientY,0,ev.clientY-r.bottom);
+      if(dx*dx+dy*dy<bd){bd=dx*dx+dy*dy;best=x;}
+    });
+    if(!best||best===fd.u){fd.tgt=null;oline.style.display='none';return;}
+    var r=best.getBoundingClientRect(),h=inRow(best,fd.list);
+    var after=h?ev.clientX>r.left+r.width/2:ev.clientY>r.top+r.height/2;
+    // Dropping right next to where it already is (after the previous unit /
+    // before the next one) changes nothing — show no line so it doesn't promise a move.
+    var i=fd.list.indexOf(fd.u),j=fd.list.indexOf(best);
+    if((after&&j===i-1)||(!after&&j===i+1)){fd.tgt=null;oline.style.display='none';return;}
+    fd.tgt=best;fd.after=after;
+    var s=oline.style;s.display='block';
+    if(h){
+      // Centre the line in the gap between the two cells that will flank the
+      // dropped field. "After Cashier" and "before Table" are the same drop, so
+      // both must resolve to one position instead of jumping across the gap.
+      var listNoU=fd.list.filter(function(x){return x!==fd.u;});
+      var bi=listNoU.indexOf(best), insAt=after?bi+1:bi;
+      var L=listNoU[insAt-1], R=listNoU[insAt];
+      var lr=L&&L.getBoundingClientRect(), rr=R&&R.getBoundingClientRect(), x;
+      if(lr&&rr&&Math.abs(lr.top-rr.top)<6){x=(lr.right+rr.left)/2;}
+      else if(rr){x=rr.left;} else if(lr){x=lr.right;} else {x=r.left;}
+      s.left=(x-1.5)+'px';s.top=r.top+'px';s.width='3px';s.height=r.height+'px';
+    }
+    else{s.left=r.left+'px';s.top=((after?r.bottom:r.top)-1.5)+'px';s.width=r.width+'px';s.height='3px';}
+  });
+  function endFieldDrag(commit){
+    if(!fd)return;
+    var f=fd;fd=null;
+    f.u.classList.remove('ord-drag');grip.classList.remove('on');oline.style.display='none';
+    clearGroupHi();
+    document.documentElement.classList.remove('ir-fdrag');
+    // Always snap the grip back to its field: if the move goes through, the
+    // editor rebuilds the preview anyway; if not, the grip must not stay under the cursor.
+    gUnit=f.u;placeGrip();
+    if(commit&&f.tgt){
+      var b=f.u.closest('.blk');
+      parent.postMessage({ir:'ford',id:b.dataset.id,key:f.u.dataset.ord,ref:f.tgt.dataset.ord,after:f.after},'*');
+    }
+  }
+  grip.addEventListener('pointerup',function(){endFieldDrag(true);});
+  grip.addEventListener('pointercancel',function(){endFieldDrag(false);});
   // Press on blank space (not an element, not the handle) → deselect + close
   // popover. mousedown, not click: a blur of the previously edited element can
   // reflow the page between mousedown and mouseup, which suppresses click.
   document.addEventListener('mousedown',function(ev){
-    if(ev.button!==0||ev.target===rsz)return;
+    if(ev.button!==0||ev.target===rsz||ev.target===grip)return;
     if(ev.target.closest&&ev.target.closest('[data-el]'))return;
     document.querySelectorAll('[data-el].el-sel').forEach(function(x){x.classList.remove('el-sel');});
     selEl=null;placeRsz();
@@ -526,6 +846,7 @@ tbody td.r{text-align:right;font-family:monospace}
 .pill{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #e4e4e7;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:600;margin-right:6px}
 .reg-note{font-size:10px;color:#71717a;padding:8px;border:1px dashed #e4e4e7;border-radius:4px;margin-bottom:12px}
 .footer-note{text-align:center;font-size:11px;color:#a1a1aa;padding-top:12px;border-top:1px solid #e4e4e7}
+.footer-note:not(:last-child){margin-bottom:12px}
 @media print{#inv-content{padding:12px}.dl-bar{display:none!important}}
 .dl-bar{display:flex;gap:8px;justify-content:flex-end;align-items:center;padding:10px 16px;background:#f4f4f5;border-bottom:1px solid #e4e4e7;flex-wrap:wrap}
 ${opts.edit ? '' : MOBILE_CSS}
@@ -560,5 +881,6 @@ ${!opts.edit && opts.autoprint ? `<script>window.onload=function(){window.print(
 </body></html>`;
   }
 
-  return {build, defaultBlocks, normalizeBlocks, BLOCK_NAMES, PLACEHOLDERS, BLOCK_ELEMENTS};
+  return {build, defaultBlocks, normalizeBlocks, BLOCK_NAMES, PLACEHOLDERS, BLOCK_ELEMENTS,
+          BLOCK_FIELDS, FIELD_GROUPS, fieldOrder, fieldGroup, EXTRA_DATA, EXTRA_GROUP, extras, extraKey, extraLabel};
 })();

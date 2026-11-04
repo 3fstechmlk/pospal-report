@@ -2,6 +2,36 @@
 
 ---
 
+## v1.5.0 — 2026-11-04
+
+### New
+- **Reorder invoice fields right on the preview.** In Edit Report, hover any
+  field in the live preview and drag its orange handle to reorder the fields
+  inside that section (e.g. put Table before Cashier, or move a totals row).
+  Hovering the handle outlines the exact field it will move. The drop line sits
+  in one place instead of flickering between two.
+- **＋ Add field on every section.** Each card — Header, Info Fields, Items
+  Table, Totals, Payment Method, Footer — can now add fields:
+  - a **transaction value** (e.g. Time, Member Phone, Total Paid, Barcode), or
+  - a **custom field** with your own label and text (supports variables like
+    `{total}`, `{member_name}`).
+  Added fields show a dashed chip with a × to remove them. The Items table adds
+  these as a column (e.g. Barcode).
+- **Text Box section.** Add a Text Box, give it a title in Admin, and the
+  merchant fills in the content on the Report page. The transaction detail lists
+  each Text Box with a checkbox — tick it to include it on that invoice (and
+  type the content); leave it unticked to keep it off. A saved default can be
+  set per Text Box and edited per invoice.
+- **Cleaner centered header.** The "Centered — classic receipt look" layout was
+  restyled: a prominent company name, tidy details, a divider, and a spaced
+  TAX INVOICE title with a muted No · Date line.
+
+### Fixed
+- Hiding a field or resizing a box in the template now survives Save — these
+  were previously lost when the template was saved.
+
+---
+
 ## v1.4.1 — 2026-10-29
 
 ### New

@@ -248,6 +248,10 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
 .ir-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .ir-chip{border:1px solid var(--bd);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--gy);cursor:pointer;background:var(--wh);user-select:none;transition:all .12s}
 .ir-chip.on{background:var(--or);border-color:var(--or);color:#fff}
+.ir-chip.added{border-style:dashed;padding-right:4px}
+.ir-chip-x{border:none;background:none;color:inherit;font-size:14px;line-height:1;cursor:pointer;padding:0 2px 0 4px;opacity:.6}
+.ir-chip-x:hover{opacity:1}
+.ir-chip-grp{font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.5px;align-self:center;min-width:54px}
 .ir-mini{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap}
 .ir-mini select,.ir-mini input[type=number]{border:1px solid var(--bd);border-radius:6px;padding:4px 6px;font-size:11px;background:var(--wh);outline:none}
 .ir-mini input[type=number]{width:64px}
@@ -554,10 +558,11 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
         <div id="irBlocks"></div>
         <div class="ir-add">
           <button onclick="irAdd('text')">＋ Text</button>
+          <button onclick="irAdd('input')">＋ TextBox</button>
           <button onclick="irAdd('divider')">＋ Divider</button>
           <button onclick="irAdd('spacer')">＋ Spacer</button>
         </div>
-        <div class="ir-hint">Drag blocks (here or directly on the preview) to reorder.<br>Click <strong>any text on the preview</strong> and <strong>type directly on it</strong> — changes apply live. Drag the <strong>corner handle</strong> to resize its box. The popover sets font and color.<br>Use the chips above to show / hide each value.<br>Text supports variables like <code>{invoice_no}</code>, <code>{total}</code>, <code>{member_name}</code>.</div>
+        <div class="ir-hint">Drag a block by its header (here or on the preview) to reorder blocks. Reorder the <strong>fields inside a block on the preview</strong> — hover a field and drag its handle.<br>Click <strong>any text on the preview</strong> and <strong>type directly on it</strong> — changes apply live. Drag the <strong>corner handle</strong> to resize its box. The popover sets font and color.<br>Use the chips to show / hide each value; <strong>＋ Add field</strong> adds a transaction value or your own custom field.<br><strong>TextBox</strong> adds a box whose content the merchant fills in on the Report page.<br>Text and custom fields support variables like <code>{invoice_no}</code>, <code>{total}</code>, <code>{member_name}</code>.</div>
       </div>
       <div class="ir-preview"><iframe id="irFrame" title="Invoice preview"></iframe></div>
     </div>
@@ -594,7 +599,7 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
 
 <div class="toast" id="toast"></div>
 
-<script src="/invoice-template.js?v=11"></script>
+<script src="/invoice-template.js?v=19"></script>
 <script>
 // ── Stale session → out ─────────────────────────────────────────────────
 // Admin sessions live in the server's memory too, so a restart invalidates the
@@ -1659,24 +1664,11 @@ function updateIrPreview() {
 // ── Block panel ────────────────────────────────────────────────────────────────
 const IR_EYE   = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const IR_TRASH = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>';
-const IR_CUSTOM_TYPES = ['text', 'divider', 'spacer'];
+const IR_CUSTOM_TYPES = ['text', 'input', 'divider', 'spacer'];
 
 function irBlk(id) { return irBlocks.find(b => b.id === id); }
 
-function irChipHtml(id, key, label, onDefault) {
-  const b = irBlk(id);
-  const isOn = b.opts[key] !== undefined ? b.opts[key] !== false : onDefault;
-  return `<span class="ir-chip ${isOn ? 'on' : ''}" onclick="irChip('${id}','${key}',this)">${label}</span>`;
-}
-
-// Element-level visibility chips (stored as irEl[key].show === false when off)
-function irElChips(type) {
-  const els = InvoiceTemplate.BLOCK_ELEMENTS[type] || [];
-  return els.map(([k, l]) => {
-    const on = !irEl[k] || irEl[k].show !== false;
-    return `<span class="ir-chip ${on ? 'on' : ''}" onclick="irElChip('${k}',this)">${l}</span>`;
-  }).join('');
-}
+// Element-level visibility toggle (stored as irEl[key].show === false when off)
 function irElChip(key, el) {
   const o = irEl[key] || (irEl[key] = {});
   const on = o.show !== false;
@@ -1684,6 +1676,92 @@ function irElChip(key, el) {
   if (Object.keys(o).length === 0) delete irEl[key];
   el.classList.toggle('on', !on);
   updateIrPreview();
+}
+
+// Built-in + admin-added fields of a block, as render descriptors.
+function irBlockFields(b) {
+  const T = InvoiceTemplate;
+  const base = (T.BLOCK_FIELDS[b.type] || []).map(f => Object.assign({}, f));
+  const g = (T.EXTRA_GROUP && T.EXTRA_GROUP[b.type]) || '';
+  const added = T.extras(b.type, b.opts).map(e => {
+    const k = T.extraKey(b.type, e);
+    return {k, l: T.extraLabel(b.type, e), g, added: true, ek: e.k, custom: !e.src};
+  });
+  return base.concat(added);
+}
+
+// Field chips of a block, in its custom order. Click toggles show / hide (reorder
+// is done on the preview). Added fields carry a × to remove them. Fixed fields trail.
+function irFieldChips(b) {
+  const T = InvoiceTemplate, fs = irBlockFields(b);
+  const ord = T.fieldOrder(b.type, b.opts);
+  const chip = f => {
+    const on = f.opt
+      ? (b.opts[f.opt] !== undefined ? b.opts[f.opt] !== false : f.def !== false)
+      : f.added ? (!irEl['f_' + f.k] || irEl['f_' + f.k].show !== false)
+      : (!irEl[f.k] || irEl[f.k].show !== false);
+    const click = f.opt ? `irChip('${b.id}','${f.opt}',this)`
+      : f.added ? `irElChip('f_${f.k}',this)` : `irElChip('${f.k}',this)`;
+    const rm = f.added ? `<button class="ir-chip-x" title="Remove field" onclick="event.stopPropagation();irRemoveField('${b.id}','${f.ek}')">×</button>` : '';
+    return `<span class="ir-chip${on ? ' on' : ''}${f.added ? ' added' : ''}" title="Click to show / hide" onclick="${click}">${f.l}${rm}</span>`;
+  };
+  const groups = [...new Set(fs.map(f => f.g || ''))];
+  const rows = groups.map(g => {
+    const inG = f => (f.g || '') === g;
+    const chips = ord.map(k => fs.find(f => f.k === k)).filter(f => f && inG(f)).map(chip)
+      .concat(fs.filter(f => f.fixed && inG(f)).map(chip));
+    const lbl = g && T.FIELD_GROUPS[g] ? `<span class="ir-chip-grp">${T.FIELD_GROUPS[g]}</span>` : '';
+    return `<div class="ir-chips">${lbl}${chips.join('')}</div>`;
+  }).join('');
+  return rows + irAddFieldPicker(b);
+}
+
+// "＋ Add field" dropdown for Info Fields / Totals: existing transaction data, or a custom field
+function irAddFieldPicker(b) {
+  const data = InvoiceTemplate.EXTRA_DATA[b.type];
+  if (!data) return '';
+  const opts = data.map(([src, lbl]) => `<option value="d:${src}">${lbl}</option>`).join('');
+  // Items adds per-item columns only (a repeated custom column reads badly in a table)
+  const custom = b.type === 'items' ? '' : `<option value="custom">Custom field (your own label + text)…</option>`;
+  return `<div class="ir-mini"><select onchange="irAddField('${b.id}',this)" style="width:100%">
+    <option value="">＋ Add field…</option>
+    <optgroup label="From transaction">${opts}</optgroup>
+    ${custom}
+  </select></div>`;
+}
+function irAddField(id, sel) {
+  const v = sel.value; sel.value = '';
+  const b = irBlk(id); if (!v || !b) return;
+  b.opts.extra = Array.isArray(b.opts.extra) ? b.opts.extra : [];
+  if (v === 'custom') {
+    b.opts.extra.push({k: 'c' + Math.random().toString(36).slice(2, 7), label: 'New Field', value: ''});
+  } else {
+    const src = v.slice(2);
+    if (b.opts.extra.some(e => e.src === src)) { renderIrBlocks(); return; }  // already added
+    b.opts.extra.push({k: src, src});
+  }
+  renderIrBlocks(); updateIrPreview();
+}
+function irRemoveField(id, ek) {
+  const b = irBlk(id); if (!b || !Array.isArray(b.opts.extra)) return;
+  b.opts.extra = b.opts.extra.filter(e => e.k !== ek);
+  const key = InvoiceTemplate.extraKey(b.type, {k: ek});   // clean up its overrides
+  ['f_' + key, 'lbl_' + key, 'val_' + key, key].forEach(x => delete irEl[x]);
+  if (Array.isArray(b.opts.order)) b.opts.order = b.opts.order.filter(k => k !== key);
+  renderIrBlocks(); updateIrPreview();
+}
+
+// Move field `key` before/after `ref` in block `id` (same group only)
+function irFieldMove(id, key, ref, after) {
+  const b = irBlk(id);
+  if (!b || !key || !ref || key === ref) return;
+  const T = InvoiceTemplate, prev = T.fieldOrder(b.type, b.opts);
+  if (!prev.includes(key) || !prev.includes(ref) || T.fieldGroup(b.type, key, b.opts) !== T.fieldGroup(b.type, ref, b.opts)) return;
+  const ord = prev.filter(k => k !== key);
+  ord.splice(ord.indexOf(ref) + (after ? 1 : 0), 0, key);
+  if (ord.join() === prev.join()) return;
+  b.opts.order = ord;
+  renderIrBlocks(); updateIrPreview();
 }
 
 function irCardBody(b) {
@@ -1694,28 +1772,18 @@ function irCardBody(b) {
         <option value="split"${o.layout !== 'center' ? ' selected' : ''}>Split — company left, title right</option>
         <option value="center"${o.layout === 'center' ? ' selected' : ''}>Centered — classic receipt look</option>
       </select></div>
-      <div class="ir-chips">${irElChips('header')}</div>`;
+      ${irFieldChips(b)}`;
     case 'meta':
       return `<div class="ir-mini"><select onchange="irOpt('${b.id}','style',this.value)">
         <option value="grid"${o.style !== 'lines' ? ' selected' : ''}>Grid cards</option>
         <option value="lines"${o.style === 'lines' ? ' selected' : ''}>Plain lines</option>
       </select></div>
-      <div class="ir-chips">
-        ${irChipHtml(b.id, 'invoice_no', 'Invoice No', false)}
-        ${irChipHtml(b.id, 'date', 'Date', false)}
-        ${irChipHtml(b.id, 'cashier', 'Cashier', true)}
-        ${irChipHtml(b.id, 'table', 'Table', true)}
-        ${irChipHtml(b.id, 'member', 'Member', true)}
-        ${irChipHtml(b.id, 'points', 'Points', true)}
-      </div>`;
+      ${irFieldChips(b)}`;
     case 'items':
-      return `<div class="ir-chips">${irElChips('items')}${irChipHtml(b.id, 'discount', 'Discount', true)}</div>`;
     case 'totals':
-      return `<div class="ir-chips">${irChipHtml(b.id, 'subtotal', 'Subtotal', true)}${irElChips('totals')}</div>`;
     case 'payment':
-      return `<div class="ir-chips">${irElChips('payment')}</div>`;
     case 'footer':
-      return `<div class="ir-chips">${irElChips('footer')}</div>`;
+      return irFieldChips(b);
     case 'text':
       return `<textarea placeholder="Your text… use {variables}" oninput="irOpt('${b.id}','text',this.value)">${esc(o.text || '')}</textarea>
       <div class="ir-mini">
@@ -1745,6 +1813,10 @@ function irCardBody(b) {
     case 'spacer':
       return `<div class="ir-mini"><label style="font-size:11px;color:var(--gy)">Height</label>
         <input type="number" min="2" max="120" value="${parseInt(o.height) || 16}" onchange="irOpt('${b.id}','height',parseInt(this.value)||16)"> px</div>`;
+    case 'input':
+      return `<div class="ir-row" style="gap:4px"><label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gy)">Title</label>
+        <input type="text" placeholder="e.g. Delivery Address" value="${esc(o.title || '')}" oninput="irOpt('${b.id}','title',this.value)" style="width:100%;border:1px solid var(--bd);border-radius:6px;padding:6px 8px;font-size:12px;outline:none"></div>
+      <div class="ir-hint" style="margin-top:6px">The merchant fills in the content on the Report page (a default they can edit per invoice). Empty content hides this box.</div>`;
     default:
       return '';
   }
@@ -1776,6 +1848,8 @@ function renderIrBlocks() {
 
 function bindIrDrag() {
   const clearMarks = () => document.querySelectorAll('#irBlocks .ir-blk').forEach(x => x.classList.remove('drop-above', 'drop-below'));
+  // Whole cards still reorder by dragging their header; field chips no longer drag
+  // (fields reorder on the preview). Dragging starts only from the card head grip.
   document.querySelectorAll('#irBlocks .ir-blk').forEach(card => {
     const head = card.querySelector('.ir-blk-head');
     head.addEventListener('dragstart', e => { irDragFrom = +card.dataset.bi; card.classList.add('dragging'); });
@@ -1816,7 +1890,7 @@ function irDel(id) {
   if (i >= 0) { irBlocks.splice(i, 1); renderIrBlocks(); updateIrPreview(); }
 }
 function irAdd(type) {
-  const defs = {text: {text: '', align: 'left', size: 'md'}, divider: {style: 'solid'}, spacer: {height: 16}};
+  const defs = {text: {text: '', align: 'left', size: 'md'}, divider: {style: 'solid'}, spacer: {height: 16}, input: {title: ''}};
   const id = 'x' + Math.random().toString(36).slice(2, 8);
   irBlocks.push({id, type, show: true, opts: defs[type] || {}});
   irSelId = id;
@@ -1844,6 +1918,7 @@ window.addEventListener('message', e => {
   if (!fr || e.source !== fr.contentWindow) return;
   const d = e.data || {};
   if (d.ir === 'reorder') { irPopClose(); irMove(d.from, d.to); }
+  else if (d.ir === 'ford') { irPopClose(); irFieldMove(d.id, d.key, d.ref, !!d.after); }
   else if (d.ir === 'select') {
     irSelId = d.id; renderIrBlocks();
     const el = document.querySelector(`#irBlocks .ir-blk[data-id="${d.id}"]`);
@@ -1870,8 +1945,10 @@ let irPopMsg = null;   // last {key, name, def, editable, rect} from the iframe
 
 // Map an element key to the Layout block card it belongs to (popover docks there)
 const IR_KEY_BLOCK = [
-  [/^(co_|title$|inv_)/, 'header'], [/^(lbl_|val_)/, 'meta'], [/^(th_|items_rows$)/, 'items'],
-  [/^tot_/, 'totals'], [/^pay_/, 'payment'], [/^(reg_note|footer_text)$/, 'footer'],
+  [/^(co_|title$|inv_)/, 'header'], [/^(lbl_hx_|val_hx_|hx_)/, 'header'],
+  [/^(lbl_tx_|val_tx_|tot_)/, 'totals'], [/^(lbl_px_|val_px_|px_)/, 'payment'],
+  [/^(lbl_fx_|val_fx_|fx_)/, 'footer'], [/^(ix_|th_|items_rows$)/, 'items'],
+  [/^(lbl_|val_)/, 'meta'], [/^pay_/, 'payment'], [/^(reg_note|footer_text)$/, 'footer'],
 ];
 function irKeyBlockId(key) {
   const m = IR_KEY_BLOCK.find(([re]) => re.test(key));

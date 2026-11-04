@@ -18,7 +18,7 @@ from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 import member_ads
 
-VERSION  = '1.4.1'
+VERSION  = '1.5.0'
 SSL_CTX  = ssl._create_unverified_context()
 PORT     = int(os.environ.get('PORT') or 8080)   # env override so a local copy can run beside 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -352,7 +352,7 @@ INV_TEXT_FIELDS = {'name', 'ssm', 'sst', 'addr1', 'addr2', 'post', 'city', 'stat
 INV_BOOL_FIELDS = {'show_member', 'show_cashier', 'show_table', 'show_discount',
                    'show_payment', 'show_subtotal'}
 INV_BLOCK_TYPES = {'header', 'meta', 'items', 'totals', 'payment', 'footer',
-                   'text', 'divider', 'spacer'}
+                   'text', 'divider', 'spacer', 'input'}
 
 def _sanitize_inv_el(v):
     """Validate per-element overrides {key: {text, size, bold, italic, color, family}}."""
@@ -377,8 +377,42 @@ def _sanitize_inv_el(v):
                 e['color'] = str(val)[:20]
             elif f == 'family' and val in ('serif', 'mono'):
                 e['family'] = val
+            elif f == 'show' and val is False:
+                e['show'] = False
+            elif f in ('width', 'height'):
+                try:
+                    e[f] = max(4, min(2000, int(round(float(val)))))
+                except (TypeError, ValueError):
+                    pass
         if e:
             out[str(k)[:40]] = e
+    return out
+
+def _sanitize_inv_extra(v):
+    """Validate admin-added fields of a block (opts.extra):
+    data field   {k, src}            — value pulled from the transaction
+    custom field {k, label, value}   — admin's own label + fixed value."""
+    out = []
+    for e in v[:20]:
+        if not isinstance(e, dict):
+            continue
+        k = str(e.get('k', ''))[:20]
+        if not k or not all(ch.isalnum() or ch == '_' for ch in k):
+            continue
+        if 'src' in e:
+            out.append({'k': k, 'src': str(e['src'])[:30]})
+        else:
+            out.append({'k': k, 'label': str(e.get('label', ''))[:60],
+                        'value': str(e.get('value', ''))[:500]})
+    return out
+
+def _sanitize_inv_inputs(v):
+    """TextBox content filled by the merchant: {blockId: text}."""
+    if not isinstance(v, dict):
+        return None
+    out = {}
+    for k, val in list(v.items())[:40]:
+        out[str(k)[:20]] = str(val)[:1000]
     return out
 
 def _sanitize_inv_blocks(v):
@@ -396,6 +430,12 @@ def _sanitize_inv_blocks(v):
                 opts[k] = val
             elif isinstance(val, (int, float)):
                 opts[k] = val
+            elif k == 'order' and isinstance(val, list):
+                # custom field order within the block: list of short keys
+                opts[k] = [str(x)[:30] for x in val[:30] if isinstance(x, str)]
+            elif k == 'extra' and isinstance(val, list):
+                # admin-added fields: {k, src} (data) or {k, label, value} (custom)
+                opts[k] = _sanitize_inv_extra(val)
             else:
                 opts[k] = str(val)[:2000]
         out.append({'id': str(b.get('id', ''))[:20], 'type': b['type'],
@@ -429,6 +469,10 @@ def _save_inv_settings(mid, body):
             el = _sanitize_inv_el(v)
             if el is not None:
                 settings['el'] = el
+        elif k == 'inputs':
+            inputs = _sanitize_inv_inputs(v)
+            if inputs is not None:
+                settings['inputs'] = inputs
     fpath = os.path.join(DATA_DIR, f'inv_settings_{mid}.json')
     with open(fpath, 'w', encoding='utf-8') as f:
         json.dump(settings, f, ensure_ascii=False, indent=2)
