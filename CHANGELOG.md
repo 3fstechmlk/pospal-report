@@ -2,6 +2,16 @@
 
 ---
 
+## v1.5.1 — 2026-11-04
+
+### Fixed
+- **Member highlight no longer leaves a stray line.** The orange bar on the
+  Member field used to travel to the far left of the Info Fields block when
+  Member was ordered first, looking like a misplaced divider. The member row is
+  now highlighted by its orange label alone.
+
+---
+
 ## v1.5.0 — 2026-11-04
 
 ### New

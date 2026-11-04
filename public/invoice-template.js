@@ -365,8 +365,10 @@ window.InvoiceTemplate = (function () {
       return `<div style="font-size:12px;line-height:2">${rows.map(r =>
         `<div style="display:flex;gap:6px;align-items:baseline"${ordA(c, r.key)}>${E(c, 'lbl_' + r.key, r.lbl + ' · Label', r.lbl, null, {style: 'color:#71717a;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;'})}${valE(r, 'font-weight:700;', 'span')}</div>`).join('')}</div>`;
     }
+    // The Member row is highlighted by its accent-coloured label — no left bar,
+    // which would otherwise travel to the far left when Member is ordered first.
     return `<div class="meta-grid">${rows.map(r =>
-      `<div class="meta-item"${r.accent ? ` style="border-left:2px solid ${c.accent};padding-left:10px"` : ''}${ordA(c, r.key)}>${lblE(r)}${valE(r, '', 'div', 'val')}</div>`).join('')}</div>`;
+      `<div class="meta-item"${ordA(c, r.key)}>${lblE(r)}${valE(r, '', 'div', 'val')}</div>`).join('')}</div>`;
   }
 
   function renderItems(o, c) {
@@ -523,11 +525,8 @@ thead th[data-el].el-sel{outline-color:#fff;box-shadow:inset 0 0 0 999px rgba(25
 #ir-grip.on{cursor:grabbing;opacity:0}
 #ir-ordline{position:fixed;display:none;background:${accent};border-radius:2px;z-index:99;pointer-events:none}
 [data-ord].ord-drag{opacity:.35}
-/* Hovering the grip outlines every field that reorders together with it. */
+/* Hovering the grip outlines just the field this grip will move. */
 [data-ord].ord-group{outline:1.5px dashed ${accent};outline-offset:2px;border-radius:3px}
-/* While dragging a field, hide decorative accent borders (e.g. the Member row's
-   left bar) so only the drop line reads as an orange line. */
-.ir-fdrag .meta-item{border-left-color:transparent!important}
 </style>
 <script>
 (function(){
@@ -608,7 +607,6 @@ thead th[data-el].el-sel{outline-color:#fff;box-shadow:inset 0 0 0 999px rgba(25
     fd={u:gUnit,list:groupUnits(gUnit),tgt:null,after:false};
     gUnit.classList.add('ord-drag');grip.classList.add('on');
     showGroupHi(gUnit);
-    document.documentElement.classList.add('ir-fdrag');
     try{grip.setPointerCapture(ev.pointerId);}catch(e){}
   });
   grip.addEventListener('pointermove',function(ev){
@@ -649,7 +647,6 @@ thead th[data-el].el-sel{outline-color:#fff;box-shadow:inset 0 0 0 999px rgba(25
     var f=fd;fd=null;
     f.u.classList.remove('ord-drag');grip.classList.remove('on');oline.style.display='none';
     clearGroupHi();
-    document.documentElement.classList.remove('ir-fdrag');
     // Always snap the grip back to its field: if the move goes through, the
     // editor rebuilds the preview anyway; if not, the grip must not stay under the cursor.
     gUnit=f.u;placeGrip();
