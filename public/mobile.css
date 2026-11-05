@@ -1,0 +1,68 @@
+/* ── 3FS merchant pages: phone / tablet layout ─────────────────────────────────
+ *
+ * Shared by Sales Report, Payment Report and Transactions (report.html,
+ * payment.html, orders.html). Linked AFTER each page's own <style>, so at equal
+ * specificity these rules win. Desktop (> 900px) is untouched.
+ * Page-only tweaks stay in the page's own <style>.
+ */
+
+/* ── Topbar: two rows below 900px ──
+   Row 1: brand · merchant name (truncates) · Member QR · Log Out
+   Row 2: the three report tabs side by side + version badge.
+   .topbar-right is flattened with display:contents so its children can be
+   re-ordered into the two rows; the ::after is the forced line break. */
+@media (max-width: 900px) {
+  .topbar { height: auto; min-height: 52px; flex-wrap: wrap; padding: 8px 14px; gap: 6px 10px; }
+  .topbar-right { display: contents; }
+  .topbar .brand { order: 1; font-size: 14px; white-space: nowrap; }
+  .topbar .merchant-name { order: 2; flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar #btnMemberQr { order: 3; flex-shrink: 0; padding: 7px 12px !important; }
+  .topbar .btn-logout { order: 4; flex-shrink: 0; padding: 6px 12px; }
+  .topbar::after { content: ''; order: 5; flex-basis: 100%; height: 0; }
+  .topbar .nav-link { order: 6; flex: 1 1 0; min-width: 0; text-align: center; white-space: nowrap; padding: 8px 4px; background: rgba(255,255,255,.05); }
+  .topbar .nav-link.active { background: rgba(255,102,0,.28); }
+  .topbar #versionBadge { order: 7; flex-shrink: 0; }
+  .topbar #versionBadge:empty { display: none; }
+}
+
+@media (max-width: 640px) {
+  /* iOS Safari zooms the page when a field under 16px gets focus */
+  input:not([type=checkbox]):not([type=radio]):not([type=color]), select, textarea { font-size: 16px !important; }
+
+  .page { padding: 12px; }
+
+  /* ── Filter bar ── */
+  .fbar { padding: 12px; gap: 8px; margin-bottom: 12px; }
+  /* 100px basis: From [date] To [date] fill the first row, so the buttons wrap below them */
+  .fbar .dp-input { flex: 1 1 100px; min-width: 0; justify-content: center; padding: 9px 8px; font-size: 14px; }
+  .fbar > .btn { flex: 1 1 auto; padding: 10px 12px; }
+  .fbar > .ac-wrap { flex: 1 1 calc(50% - 4px); }
+  .fbar > .ac-wrap > button { width: 100%; padding: 10px 8px; }
+  /* Menus stretch to the button's width instead of sticking out past the screen edge */
+  .fbar .ac-menu { left: 0; right: 0; min-width: 0; }
+  .fbar .ac-menu-item { white-space: normal; padding: 12px 14px; }
+  .fbar .badge-row, .fbar .fbar-right { margin-left: 0; flex: 1 1 100%; justify-content: space-between; flex-wrap: wrap; }
+
+  /* ── Stat cards: two per row ── */
+  .stats { gap: 8px; margin-bottom: 12px; }
+  .sc { min-width: calc(50% - 4px); padding: 11px 12px; }
+  .sc .val { font-size: 16px; overflow-wrap: anywhere; }
+
+  /* ── Table card ── */
+  .tc-head { padding: 12px 14px; }
+  .sw { -webkit-overflow-scrolling: touch; }
+  .sw > table { min-width: 0; }
+  /* Wide numeric tables: keep the first column (the date) in view while scrolling sideways */
+  .sticky-c1 th:first-child, .sticky-c1 td:first-child { position: sticky; left: 0; z-index: 1; box-shadow: inset -1px 0 0 var(--bd); }
+  .sticky-c1 td:first-child { background: var(--wh); }
+  .sticky-c1 .tot td:first-child { background: #fff7ed; }
+  .sticky-c1 thead th:first-child { box-shadow: inset -1px 0 0 rgba(255,255,255,.3); }
+  .sv { padding: 40px 16px; }
+
+  /* ── Modals: never wider than the screen ── */
+  .cc-overlay, .ar-overlay, .je-overlay, .rw-overlay, .si-overlay, .is-overlay { padding: 12px; }
+  .cc-modal, .ar-modal, .je-modal, .rw-modal, .si-modal { max-width: calc(100vw - 24px); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; padding: 20px; }
+  .is-modal { max-width: 100%; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); }
+  .cc-foot, .ar-foot, .je-foot, .rw-foot, .si-foot, .is-foot { flex-wrap: wrap; }
+  .cc-foot .btn, .ar-foot .btn, .je-foot .btn, .rw-foot .btn, .si-foot .btn, .is-foot .btn { flex: 1 1 auto; padding: 10px 12px !important; }
+}

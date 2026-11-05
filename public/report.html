@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sales Report · 3FS Technology</title>
-<link rel="stylesheet" href="/datepicker.css?v=5">
+<link rel="stylesheet" href="/datepicker.css?v=6">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--or:#f60;--dk:#18181b;--gy:#71717a;--bd:#e4e4e7;--bg:#fafafa;--wh:#fff;--re:#dc2626}
@@ -265,6 +265,7 @@ html:has(#mqOverlay.show),html:has(#mqOverlay.show) body{overflow:hidden}
 .mq-x{right:14px}
 }
 </style>
+<link rel="stylesheet" href="/mobile.css?v=1">
 </head>
 <body>
 
@@ -354,7 +355,7 @@ html:has(#mqOverlay.show),html:has(#mqOverlay.show) body{overflow:hidden}
       <p id="ldMsg">Fetching from Pospal…</p>
       <small>This may take a moment for large date ranges</small>
     </div>
-    <div class="sw" id="tWrap" style="display:none">
+    <div class="sw sticky-c1" id="tWrap" style="display:none">
       <table>
         <thead><tr>
           <th>Business Date</th><th>Tx</th>
@@ -372,6 +373,8 @@ html:has(#mqOverlay.show),html:has(#mqOverlay.show) body{overflow:hidden}
 
 <script src="/datepicker.js?v=6"></script>
 <script src="/quota-meter.js?v=1"></script>
+<script src="/landscape.js?v=3"></script>
+<script>LandscapeView.mount(document.querySelector('.page > .tc'));</script>
 <script>
 const TOKEN = sessionStorage.getItem('merchantToken');
 if (!TOKEN) window.location.href = '/';

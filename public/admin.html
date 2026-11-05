@@ -295,6 +295,101 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
 .toggle-track:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .toggle-switch input:checked+.toggle-track{background:var(--or)}
 .toggle-switch input:checked+.toggle-track:before{transform:translateX(18px)}
+
+/* ── Phones ─────────────────────────────────────────────────────────────────── */
+@media (max-width:640px){
+/* iOS Safari zooms the page when a field under 16px gets focus */
+input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea{font-size:16px!important}
+
+.topbar{padding:0 12px;gap:12px}
+.brand{font-size:14px;white-space:nowrap}
+.topbar nav a{padding:7px 10px}
+
+#loginWrap{padding:16px;align-items:flex-start;padding-top:10vh}
+.login-card{width:100%;max-width:360px;padding:28px 22px}
+
+.page{padding:12px}
+
+/* Toolbar: title / search / filter pills (swipe sideways) / buttons, one row each */
+.toolbar{gap:8px;margin-bottom:12px}
+.toolbar h1{flex:1 1 100%;font-size:17px;margin-right:0}
+input.search{flex:1 1 100%;width:auto;padding:9px 12px}
+.filter-pills{flex:1 1 100%;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.filter-pills::-webkit-scrollbar{display:none}
+.pill{flex-shrink:0;white-space:nowrap;padding:7px 13px}
+.toolbar>.btn-p{flex:1 1 auto;padding:9px 12px}
+.toolbar>.btn-g{padding:8px 14px}
+.vbtn{padding:8px 10px}
+
+/* Pending Setup, two lines per row:
+     Company name ............ Stage
+     account ⧉          [✓] [Setup] [✕]
+   Reordered with `order`; ::after is the line break. The name's 0 basis keeps the
+   stage on its line (a long name wraps instead), and the account truncates so the
+   buttons never get pushed onto a third line. */
+.pending-head{padding:10px 14px}
+.pending-row{flex-wrap:wrap;row-gap:4px;padding:10px 14px}
+.pending-name{order:1;flex:1 1 0;white-space:normal;overflow-wrap:anywhere}
+.pending-section{order:2;flex:0 1 auto;white-space:normal;text-align:right}
+.pending-row::after{content:'';order:3;flex-basis:100%;height:0}
+/* flex-wrap breaks lines by the un-shrunk width, so cap it: copy + ✓ + Setup + ✕ + gaps ≈ 200px */
+.pending-acct{order:4;flex:0 1 auto;min-width:0;max-width:calc(100% - 210px);overflow:hidden;text-overflow:ellipsis}
+.btn-copy-acct{order:5;padding:6px}
+.pending-check{order:6;margin-left:auto;width:30px;height:30px}
+.pending-row .btn-sm{order:7;padding:7px 12px}
+
+/* Merchant table → one card per merchant:
+     #  Company name ........ [status]
+        username ........ RM this month
+     [Edit] [Edit Report] [PW] [Del]          */
+.card-head{padding:12px 14px;flex-wrap:wrap;gap:6px}
+.card>table,.card>table>tbody{display:block}
+.card>table>thead{display:none}
+.card>table>tbody>tr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"num name status" "num user sales" "act act act";column-gap:10px;row-gap:3px;align-items:center;padding:12px 14px}
+.card>table>tbody>tr>td{display:block;padding:0;min-width:0}
+.card>table>tbody>tr>td:nth-child(1){grid-area:num;align-self:start;line-height:20px}
+.card>table>tbody>tr>td:nth-child(2){grid-area:name;white-space:normal;overflow-wrap:anywhere;font-size:14px;line-height:20px}
+.card>table>tbody>tr>td:nth-child(3){grid-area:user}
+.card>table>tbody>tr>td:nth-child(4){grid-area:status;justify-self:end}
+.card>table>tbody>tr>td:nth-child(5){grid-area:sales;justify-self:end}
+.card>table>tbody>tr>td:nth-child(5)::before{content:'RM ';color:#a1a1aa;font-weight:500}
+.card>table>tbody>tr>td.actions{grid-area:act;display:flex;gap:6px;width:auto;margin-top:9px}
+.card>table>tbody>tr>td.actions .btn{flex:1 1 auto;margin-left:0!important;padding:8px 6px}
+/* The invoice template editor needs a big screen to drag and edit fields, so phones don't get the button */
+.card>table>tbody>tr>td.actions .btn-edit-report{display:none}
+.card>table>tbody>tr>td.empty-td{grid-area:1/1/2/-1;padding:24px 8px!important}
+
+/* Modals */
+.overlay{padding:10px}
+.modal{max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px)}
+.modal-head{padding:14px 16px}
+.modal-body{padding:16px}
+.modal-foot{padding:12px 16px}
+.modal-foot .btn{flex:1 1 auto;padding:10px 12px}
+.modal-close{font-size:26px;padding:0 6px}
+#fDayStart+span{display:block;margin:6px 0 0!important}
+.al-chips{padding:12px 16px 0}
+.al-body{padding:10px 16px 16px}
+.al-row{flex-wrap:wrap;gap:2px 10px}
+.al-feat{width:auto}
+.al-what{flex:1 1 100%}
+.cl-body{padding:4px 16px 16px}
+
+.toast{left:12px;right:12px;bottom:12px;max-width:none;text-align:center}
+
+/* Invoice Template editor: full screen, settings on top, preview below (both scroll) */
+#irModal{padding:0}
+.ir-editor{width:100vw;max-width:none;height:100vh;height:100dvh;border-radius:0}
+.ir-head{flex-wrap:wrap;padding:10px 12px;gap:8px}
+.ir-head h3{flex:1 1 calc(100% - 50px);margin-right:0;font-size:14px}
+.ir-head .modal-close{order:1}
+.ir-head .ir-head-accent{order:2}
+.ir-head .btn{order:3;flex:1 1 auto;padding:8px 12px}
+.ir-body{flex-direction:column}
+.ir-form{width:auto;flex:0 1 auto;max-height:46%;border-right:0;border-bottom:1px solid var(--bd);padding:14px 12px}
+.ir-preview{flex:1 1 0;min-height:0;padding:10px}
+.ir-pop{max-width:calc(100vw - 16px)}
+}
 </style>
 </head>
 <body>
@@ -867,7 +962,7 @@ function renderTable() {
       <td class="num-r">${hasStats ? fmtSales(s.month_sales) : '<span style="color:#a1a1aa">–</span>'}</td>
       <td class="actions">
         <button class="btn btn-g btn-sm" onclick="openEdit('${m.id}')">Edit</button>
-        <button class="btn btn-g btn-sm" style="margin-left:4px" onclick="openEditReport('${m.id}')">Edit Report</button>
+        <button class="btn btn-g btn-sm btn-edit-report" style="margin-left:4px" onclick="openEditReport('${m.id}')">Edit Report</button>
         <button class="btn btn-g btn-sm" style="margin-left:4px" onclick="openResetPw('${m.id}','${esc(m.name)}')">PW</button>
         <button class="btn btn-r btn-sm" style="margin-left:4px" onclick="openDelete('${m.id}','${esc(m.name)}')">Del</button>
       </td>

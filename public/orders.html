@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Transactions · 3FS Technology</title>
-<link rel="stylesheet" href="/datepicker.css?v=5">
+<link rel="stylesheet" href="/datepicker.css?v=6">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--or:#f60;--dk:#18181b;--gy:#71717a;--bd:#e4e4e7;--bg:#fafafa;--wh:#fff;--re:#dc2626;--gr:#16a34a}
@@ -196,7 +196,39 @@ tfoot tr.fs-net td.row-lbl{font-weight:700;font-size:12px}
 /* ── Animations ── */
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeSlide{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Phones (shared shell rules are in /mobile.css) ── */
+@media (max-width:640px){
+.fbar select{flex:1 1 calc(50% - 4px);width:auto;min-width:0;padding-top:9px;padding-bottom:9px}
+.fbar .inp{flex:1 1 100%;width:auto;padding:9px 10px}
+.fbar #quotaMeter{margin-left:0!important}
+.tc-head-right{flex:1 1 100%;flex-wrap:wrap;gap:6px}
+.tc-count{flex:1 1 100%}
+.tc-head-right .btn{flex:1 1 auto;padding:8px 10px}
+/* The table scrolls sideways (1270px of columns); keep the opened detail pinned to the
+   visible width so items, remark and Print / WhatsApp buttons don't need side-scrolling.
+   100vw minus .page padding (2×12) and .tc borders (2) and .din's 6px left margin. */
+tr.drow td{overflow:visible}   /* an overflow:hidden cell would become the sticky container */
+#sv2 .sw{container-type:inline-size}
+/* Columns no longer stretch past their set widths here, so the 40px expand column
+   must not lose 22px to padding or the button gets clipped */
+tbody tr.trow td:first-child{padding-left:4px;padding-right:4px}
+.din{position:sticky;left:0;width:calc(100vw - 32px);width:calc(100cqw - 6px);box-sizing:border-box;padding:4px 10px 12px}
+.din .btn{padding:9px 14px!important;font-size:12px!important}
+/* Number columns size to their content so the item name gets the rest */
+.dtbl{table-layout:auto}
+.dtbl thead th.r{width:1%!important;padding:5px 4px;white-space:nowrap}
+.dtbl tbody td{padding:6px 4px}
+.dtbl tbody td.r,.dtbl tbody td.aval{white-space:nowrap}
+.dtbl tbody td:first-child{padding-left:0}
+.tbx-list{max-width:none}
+.is-2col{grid-template-columns:1fr}
+.is-body{padding:16px}
+.pgbar{flex-wrap:wrap}
+.pgbtn{padding:8px 12px}
+}
 </style>
+<link rel="stylesheet" href="/mobile.css?v=1">
 </head>
 <body>
 

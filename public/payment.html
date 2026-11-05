@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Payment Report · 3FS Technology</title>
-<link rel="stylesheet" href="/datepicker.css?v=5">
+<link rel="stylesheet" href="/datepicker.css?v=6">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--or:#f60;--dk:#18181b;--gy:#71717a;--bd:#e4e4e7;--bg:#fafafa;--wh:#fff;--re:#dc2626}
@@ -79,6 +79,7 @@ td:last-child{font-weight:600;background:#fff7ed}
 .cc-err{font-size:12px;color:var(--re);min-height:16px;margin-bottom:10px}
 .cc-foot{display:flex;gap:8px;justify-content:flex-end}
 </style>
+<link rel="stylesheet" href="/mobile.css?v=1">
 </head>
 <body>
 
@@ -124,7 +125,7 @@ td:last-child{font-weight:600;background:#fff7ed}
       </div>
     </div>
     <div id="svEmpty" class="sv"><div class="spin"></div><p>Loading…</p></div>
-    <div class="sw" id="tableWrap" style="display:none">
+    <div class="sw sticky-c1" id="tableWrap" style="display:none">
       <table>
         <thead><tr id="thead-row"></tr></thead>
         <tbody id="tb"></tbody>
@@ -136,6 +137,8 @@ td:last-child{font-weight:600;background:#fff7ed}
 
 <script src="/datepicker.js?v=6"></script>
 <script src="/quota-meter.js?v=1"></script>
+<script src="/landscape.js?v=3"></script>
+<script>LandscapeView.mount(document.querySelector('.page > .tc'));</script>
 <script>
 const TOKEN = sessionStorage.getItem('merchantToken');
 if (!TOKEN) window.location.href = '/';

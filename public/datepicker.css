@@ -95,3 +95,40 @@
   text-align: center; white-space: nowrap;
 }
 .dp-sh:hover { background: #fff8f3; border-color: #f60; color: #f60; }
+
+/* ── Phones: bottom sheet ──────────────────────────────────────────────────────
+   The three columns (≈470px) don't fit a phone, and datepicker.js positions the
+   popup next to the field with inline top/left. Below 640px it becomes a
+   full-width sheet pinned to the bottom (the !important beats those inline values),
+   stacked: shortcuts (swipe sideways) → month picker → day calendar → Close.
+   The big box-shadow dims the page behind it. */
+@media (max-width: 640px) {
+  .dp-popup {
+    top: auto !important; left: 0 !important; right: 0; bottom: 0;
+    flex-direction: column; border-radius: 14px 14px 0 0; border-bottom: 0;
+    max-height: 88vh; max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain;
+    box-shadow: 0 0 0 100vmax rgba(0,0,0,.4);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .dp-sh-col {
+    order: 0; flex-direction: row; overflow-x: auto; min-width: 0; gap: 6px;
+    border-left: 0; border-bottom: 1px solid #f0f0f0; padding: 14px 16px 12px;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .dp-sh-col::-webkit-scrollbar { display: none; }
+  .dp-sh { flex-shrink: 0; padding: 8px 12px; font-size: 13px; border-radius: 99px; }
+
+  .dp-mcol { order: 1; width: auto; min-width: 0; border-left: 0; border-bottom: 1px solid #f0f0f0; padding: 10px 16px 12px; }
+  .dp-mgrid { grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .dp-mb { padding: 9px 2px; font-size: 13px; }
+
+  .dp-cal { order: 2; width: auto; min-width: 0; padding: 12px 16px 16px; }
+  .dp-nav-lbl { font-size: 15px; }
+  .dp-ynav-lbl { font-size: 14px; }
+  .dp-arr { width: 40px; height: 40px; font-size: 26px; }
+  .dp-wdays span { font-size: 12px; }
+  .dp-grid { gap: 3px; }
+  .dp-d { padding: 10px 0; font-size: 15px; border-radius: 6px; }
+  .dp-foot { margin-top: 12px; }
+  .dp-cls { width: 100%; padding: 11px; font-size: 14px; border-radius: 8px; }
+}

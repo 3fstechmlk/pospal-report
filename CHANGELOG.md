@@ -2,6 +2,38 @@
 
 ---
 
+## v1.6.0 — 2026-11-05
+
+### New
+- **Full-screen landscape report on phones.** Sales Report and Payment Report
+  now have an orange rotate button at the top right of the report table. Tap it
+  and only the report fills the screen, turned sideways (to the left first, then
+  it follows how you hold the phone). The column headers stay on top and the
+  date column stays on the left while you scroll. Tap **Exit** to go back.
+  On iPhone the page cannot hide Safari's address bar or turn the screen by
+  itself, so the table is shown sideways; turn the phone left to read it.
+
+### Improved
+- **Report pages fit phone screens.** Sales Report, Payment Report and
+  Transactions no longer run off the side of the screen:
+  - the top bar uses two rows (name and Log Out on top, the three report tabs below);
+  - From / To fill one row and the buttons sit below them;
+  - stat cards show two per row;
+  - wide tables keep the date column in view while you scroll sideways;
+  - pop-up windows never get wider than the screen;
+  - the date picker opens from the bottom of the screen with larger dates to tap.
+- **Transactions on phones.** An expanded transaction's items, remark and
+  Print / WhatsApp buttons stay on screen instead of scrolling sideways with the
+  table, and the expand button is no longer cut off.
+- **Admin on phones.** Each merchant shows as a card with Edit / PW / Del
+  buttons. Pending Setup shows each entry on two lines (company name and stage,
+  then account and buttons). Edit Report is hidden on phones because the
+  invoice template editor needs a bigger screen.
+- **Login pages fit phone screens**, and text boxes no longer make iPhone zoom
+  in when you tap them.
+
+---
+
 ## v1.5.1 — 2026-11-04
 
 ### Fixed
