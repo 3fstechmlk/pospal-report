@@ -39,12 +39,12 @@ tbody tr{border-bottom:1px solid var(--bd);transition:background .1s}
 tbody tr:last-child{border-bottom:0}
 tbody tr:hover{background:#fafafa}
 td{padding:11px 14px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-td.actions{text-align:right;white-space:nowrap;width:290px}
+td.actions{text-align:right;white-space:nowrap;width:370px}
 td.mono{font-family:monospace;font-size:12px;color:var(--gy)}
 .empty-td{text-align:center;color:var(--gy);padding:40px!important;white-space:normal}
 .col-num{width:48px}.col-name{width:24%}.col-user{width:14%}
 .col-status{width:100px}.col-sales{width:130px;text-align:right}
-.col-act{width:290px}
+.col-act{width:370px}  /* room for Activate on deactivated rows */
 
 /* Status filter pills */
 .filter-pills{display:flex;gap:4px}
@@ -354,7 +354,7 @@ input.search{flex:1 1 100%;width:auto;padding:9px 12px}
 .card>table>tbody>tr>td:nth-child(5){grid-area:sales;justify-self:end}
 .card>table>tbody>tr>td:nth-child(5)::before{content:'RM ';color:#a1a1aa;font-weight:500}
 .card>table>tbody>tr>td.actions{grid-area:act;display:flex;gap:6px;width:auto;margin-top:9px}
-.card>table>tbody>tr>td.actions .btn{flex:1 1 auto;margin-left:0!important;padding:8px 6px}
+.card>table>tbody>tr>td.actions .btn{flex:1 1 auto;margin-left:0!important;margin-right:0!important;padding:8px 6px}
 /* The invoice template editor needs a big screen to drag and edit fields, so phones don't get the button */
 .card>table>tbody>tr>td.actions .btn-edit-report{display:none}
 .card>table>tbody>tr>td.empty-td{grid-area:1/1/2/-1;padding:24px 8px!important}
@@ -891,7 +891,7 @@ function getMerchantStatus(id) {
 
 function statusBadge(s) {
   if (s.status === 'deactivated')
-    return `<span class="badge badge-off" title="90+ days no sales — sync stopped">Deactivated</span>`;
+    return `<span class="badge badge-off" title="90+ days no sales — only yesterday is checked each day; full sync resumes on the next sale, or press Activate">Deactivated</span>`;
   if (s.status === 'inactive_30')
     return `<span class="badge badge-i30" title="${s.consecutive_empty_days} consecutive days no sales">Inactive 30d</span>`;
   if (s.status === 'inactive_10')
@@ -961,6 +961,7 @@ function renderTable() {
       <td>${hasStats ? statusBadge(s) : '<span style="color:#a1a1aa;font-size:11px">–</span>'}</td>
       <td class="num-r">${hasStats ? fmtSales(s.month_sales) : '<span style="color:#a1a1aa">–</span>'}</td>
       <td class="actions">
+        ${s.status === 'deactivated' ? `<button class="btn btn-g btn-sm btn-activate" style="margin-right:4px" title="Resume sync now and fetch missed days. Not auto-deactivated again for 30 days." onclick="activateMerchant('${m.id}', this)">Activate</button>` : ''}
         <button class="btn btn-g btn-sm" onclick="openEdit('${m.id}')">Edit</button>
         <button class="btn btn-g btn-sm btn-edit-report" style="margin-left:4px" onclick="openEditReport('${m.id}')">Edit Report</button>
         <button class="btn btn-g btn-sm" style="margin-left:4px" onclick="openResetPw('${m.id}','${esc(m.name)}')">PW</button>
@@ -1543,6 +1544,24 @@ async function doDelete() {
     showToast(e.message);
   } finally {
     document.getElementById('bDel').disabled = false;
+  }
+}
+
+// ── Activate a deactivated merchant ────────────────────────────────────────────
+async function activateMerchant(id, btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/admin/reactivate', {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify({mid: id})
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Activate failed');
+    const m = merchants.find(x => x.id === id);
+    showToast(`${m ? m.name : 'Merchant'} activated — syncing now, no auto-deactivation until ${d.until}`);
+    await loadStats();
+  } catch (e) {
+    showToast(e.message);
+    btn.disabled = false;
   }
 }
 

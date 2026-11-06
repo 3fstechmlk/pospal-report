@@ -2,6 +2,26 @@
 
 ---
 
+## v1.7.0 — 2026-11-06
+
+### New
+- **Activate button for deactivated merchants.** In the merchant list, a
+  merchant marked Deactivated now has an **Activate** button. Pressing it turns
+  the merchant back on, syncs it straight away and fetches the days it missed
+  while deactivated. It will not be deactivated again automatically for the
+  next 30 days.
+
+### Fixed
+- **Deactivated merchants that start selling again are picked up
+  automatically.** A merchant with no sales for 90 days used to stop syncing
+  for good, so if it opened later, a day only showed up in its report when
+  someone happened to open the report the next morning; other days stayed
+  empty. Deactivated merchants are now checked every morning (one API call from
+  that merchant's own quota). As soon as a sale shows up, the merchant becomes
+  Active again and the days it missed are fetched.
+
+---
+
 ## v1.6.0 — 2026-11-05
 
 ### New

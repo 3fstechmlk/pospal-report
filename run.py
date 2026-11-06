@@ -18,7 +18,7 @@ from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 import member_ads
 
-VERSION  = '1.6.0'
+VERSION  = '1.7.0'
 SSL_CTX  = ssl._create_unverified_context()
 PORT     = int(os.environ.get('PORT') or 8080)   # env override so a local copy can run beside 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -39,7 +39,8 @@ MEMBER_ADS_DIR   = os.path.join(DATA_DIR, 'member_ads')   # created on first upl
 
 SYNC_API_LIMIT      = 250   # max sync API calls per merchant per day
 BACKFILL_STOP_DAYS  = 30    # consecutive empty days before backfill stops (covers long holidays)
-DEACTIVATE_DAYS     = 90    # consecutive recent empty days → deactivate merchant (stop syncing)
+DEACTIVATE_DAYS     = 90    # consecutive recent empty days → deactivate merchant (daily probe of yesterday only)
+REACTIVATE_GRACE_DAYS = 30  # after an admin Activate, no auto-deactivation for this many days
 SYNC_INTERVAL_SECS  = 3600  # run sync loop every hour
 SYNC_WORKERS        = 100   # merchants synced in parallel
 TODAY_FETCH_CD_SECS = 1800  # cooldown between live re-fetches of today's data per merchant
@@ -1640,9 +1641,13 @@ def sync_merchant(merchant):
         init_sync_state(mid)
         state = get_sync_state(mid)
 
-    # Skip deactivated merchants entirely — no API calls wasted
-    if state.get('deactivated'):
-        return
+    # Deactivated merchants still get Step 1 below (one call a day for yesterday),
+    # and nothing else.  Deactivation used to skip the merchant for good: one that
+    # sat at zero for 90 days before it opened (gborigin, 2026-10) was never synced
+    # again, so its days only reached the cache when someone happened to open the
+    # report the next morning.  The daily probe saves each day as it completes and
+    # turns the merchant back on as soon as it sees a sale.
+    deactivated = bool(state.get('deactivated'))
 
     # Reset daily call counter if it's a new calendar day
     if state.get('api_calls_reset_date') != today:
@@ -1710,6 +1715,22 @@ def sync_merchant(merchant):
         else:
             print(f'  [sync] {name} daily {yesterday}: quota exhausted ({calls_used}/{SYNC_API_LIMIT})')
 
+    # ── Step 1.1: deactivated → reactivate on the first sale, otherwise stop here ─
+    if deactivated:
+        ytix = _from_disk(mid, yesterday) or []
+        if not any(int(t.get('invalid', 0) or 0) == 0 for t in ytix):
+            state['api_calls_sync_today'] = calls_used
+            update_sync_state(mid, state)
+            return
+        # Restart the backfill from yesterday so any day missed while deactivated
+        # is fetched.  Days already cached cost no calls, and it stops after
+        # BACKFILL_STOP_DAYS empty days, well inside the 90 that deactivated it.
+        state['deactivated']              = False   # not pop(): update_sync_state merges
+        state['backfill_completed']       = False
+        state['backfill_date']            = yesterday
+        state['consecutive_no_data_days'] = 0
+        print(f'  [sync] {name} reactivated — sales found on {yesterday}')
+
     # ── Step 1.2: also re-fetch day-before-yesterday once per sync day ──────────
     # Pospal API sometimes returns incomplete data at sync time (tickets settled late).
     # Re-fetching 2 days ago catches any tickets that appeared after yesterday's sync.
@@ -1741,11 +1762,15 @@ def sync_merchant(merchant):
                 if count is not None:
                     print(f'  [sync] {name} gap-fill {check_date}: {count} tickets, {made} API calls')
 
-    # ── Deactivation check: 90 consecutive recent empty days → stop syncing forever ─
+    # ── Deactivation check: 90 consecutive recent empty days → probe-only mode (Step 1.1) ─
+    # Skipped while an admin Activate's grace period runs (reactivate_merchant):
+    # the 90 empty days that deactivated the merchant are still on disk, so the
+    # check would otherwise switch it straight back off on the first sync.
     cache_dir = os.path.join(CACHE_DIR, mid)
     consec_recent = 0
     yest_d = date.today() - timedelta(days=1)
-    for i in range(DEACTIVATE_DAYS):
+    exempt_until = state.get('deactivate_exempt_until') or ''
+    for i in range(0 if today <= exempt_until else DEACTIVATE_DAYS):
         ds = str(yest_d - timedelta(days=i))
         p  = os.path.join(cache_dir, ds + '.json')
         if not os.path.exists(p): break
@@ -1835,6 +1860,28 @@ def sync_all_merchants():
                 print(f'  [sync] {m.get("name","?")} error: {e}')
             _flush_sync_state()
     print(f'  [sync] all merchants done')
+
+def reactivate_merchant(merchant):
+    """Admin 'Activate': undo a deactivation by hand and sync straight away.
+
+    Same reset as the automatic reactivation in sync_merchant (backfill restarts
+    from yesterday, so days missed while deactivated get fetched), plus a grace
+    period: without it the next sync would see the 90 empty days still on disk
+    and deactivate the merchant again.  Returns the last day of the grace period.
+    """
+    mid   = merchant['id']
+    until = str(date.today() + timedelta(days=REACTIVATE_GRACE_DAYS))
+    update_sync_state(mid, {
+        'deactivated'             : False,
+        'backfill_completed'      : False,
+        'backfill_date'           : str(current_business_date() - timedelta(days=1)),
+        'consecutive_no_data_days': 0,
+        'deactivate_exempt_until' : until,
+    })
+    _invalidate_stats_cache(mid)
+    print(f'  [sync] {merchant.get("name", mid)} activated by admin — no auto-deactivation until {until}')
+    trigger_sync_for(merchant)
+    return until
 
 def trigger_sync_for(merchant):
     """Spawn a one-shot background thread to sync a single merchant immediately."""
@@ -3645,6 +3692,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({'ok': True, 'token': new_admin_session()})
             else:
                 self._json({'ok': False, 'error': 'Wrong password'}, 401)
+
+        # ── Admin: Activate a deactivated merchant ─────────────────────────────
+        elif pt == '/api/admin/reactivate':
+            if not self._admin_auth():
+                self._json({'ok': False, 'error': 'Unauthorized'}, 401); return
+            m = get_merchant_by_id(str(self._body().get('mid', '')).strip())
+            if not m:
+                self._json({'ok': False, 'error': 'Merchant not found'}, 404); return
+            until = reactivate_merchant(m)
+            self._json({'ok': True, 'until': until})
 
         # ── Admin: dismiss workflow pending entry ──────────────────────────────
         elif pt == '/api/admin/pending-dismiss':
