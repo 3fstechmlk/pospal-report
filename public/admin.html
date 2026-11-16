@@ -694,7 +694,7 @@ input.search{flex:1 1 100%;width:auto;padding:9px 12px}
 
 <div class="toast" id="toast"></div>
 
-<script src="/invoice-template.js?v=20"></script>
+<script src="/invoice-template.js?v=21"></script>
 <script>
 // ── Stale session → out ─────────────────────────────────────────────────
 // Admin sessions live in the server's memory too, so a restart invalidates the
@@ -1888,11 +1888,18 @@ function irCardBody(b) {
       </select></div>
       ${irFieldChips(b)}`;
     case 'meta':
+      // templates saved before the chips were linked
+      if (o.mem_name === false && o.mem_phone === false) o.member = false;
+      if (o.member === false) o.mem_name = o.mem_phone = false;
       return `<div class="ir-mini"><select onchange="irOpt('${b.id}','style',this.value)">
         <option value="grid"${o.style !== 'lines' ? ' selected' : ''}>Grid cards</option>
         <option value="lines"${o.style === 'lines' ? ' selected' : ''}>Plain lines</option>
       </select></div>
-      ${irFieldChips(b)}`;
+      ${irFieldChips(b)}
+      <div class="ir-chips"><span class="ir-chip-grp" title="What the Member field shows">Member</span>${
+        [['mem_name', 'Name'], ['mem_phone', 'Phone']].map(([k, l]) =>
+          `<span class="ir-chip${o[k] !== false ? ' on' : ''}" title="Click to show / hide in the Member field" onclick="irChip('${b.id}','${k}',this)">${l}</span>`).join('')
+      }</div>`;
     case 'items':
     case 'totals':
     case 'payment':
@@ -1996,7 +2003,24 @@ function irToggle(id, key, el){ const b = irBlk(id); if (!b) return; b.opts[key]
 function irChip(id, key, el)  {
   const b = irBlk(id); if (!b) return;
   const cur = b.opts[key] !== undefined ? b.opts[key] !== false : el.classList.contains('on');
-  b.opts[key] = !cur; el.classList.toggle('on', !cur); updateIrPreview();
+  b.opts[key] = !cur;
+  if (b.type === 'meta' && irSyncMember(b.opts, key)) { renderIrBlocks(); updateIrPreview(); return; }
+  el.classList.toggle('on', !cur); updateIrPreview();
+}
+// Info Fields: keep the Member chip in step with its Name / Phone parts.
+// Member off → both parts off; Member on → both parts on; both parts off →
+// Member off; a part turned on → Member on.
+// Returns true when it changed another chip, so the caller re-renders the card.
+function irSyncMember(o, key) {
+  const on = k => o[k] !== false;
+  if (key === 'member') {
+    o.mem_name = o.mem_phone = on('member');
+    return true;
+  } else if (key === 'mem_name' || key === 'mem_phone') {
+    if (!on('mem_name') && !on('mem_phone') && on('member')) { o.member = false; return true; }
+    if (on(key) && !on('member')) { o.member = true; return true; }
+  }
+  return false;
 }
 function irEye(id) { const b = irBlk(id); if (!b) return; b.show = !b.show; renderIrBlocks(); updateIrPreview(); }
 function irDel(id) {

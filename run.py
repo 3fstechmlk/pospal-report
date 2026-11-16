@@ -18,7 +18,7 @@ from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 import member_ads
 
-VERSION  = '1.7.0'
+VERSION  = '1.8.0'
 SSL_CTX  = ssl._create_unverified_context()
 PORT     = int(os.environ.get('PORT') or 8080)   # env override so a local copy can run beside 8080
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

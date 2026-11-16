@@ -2,6 +2,21 @@
 
 ---
 
+## v1.8.0 — 2026-11-16
+
+### New
+- **Choose what the Member field shows on invoices.** In Edit Report → Info
+  Fields, a new **Member: Name / Phone** row lets you show the member's name,
+  phone number, or both. Turning both off hides the Member field, and turning
+  Member off or on switches Name and Phone with it.
+
+### Improved
+- **Info Fields fill the whole row.** With only a few fields (for example
+  Cashier and Member), they now share the full width and are centred, instead
+  of sitting on the left with an empty gap on the right.
+
+---
+
 ## v1.7.0 — 2026-11-06
 
 ### New

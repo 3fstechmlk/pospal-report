@@ -340,7 +340,12 @@ window.InvoiceTemplate = (function () {
     if (o.date)       rows.push({key: 'date', lbl: 'Date', val: v.date + (v.time ? ' · ' + v.time : '')});
     if (o.cashier !== false && v.cashier) rows.push({key: 'cashier', lbl: 'Cashier', val: v.cashier});
     if (o.table   !== false && v.table)   rows.push({key: 'table',   lbl: 'Table',   val: v.table});
-    if (o.member  !== false && c.member)  rows.push({key: 'member',  lbl: 'Member',  val: (v.member_name || v.member_phone || '—') + (v.member_name && v.member_phone ? ' · ' + v.member_phone : ''), accent: true});
+    // mem_name / mem_phone pick what the Member value shows (both on by default).
+    // With both off there is nothing to show, so the row goes too; a part the
+    // admin turned off is never used as a fallback for a missing one.
+    const memParts = [o.mem_name !== false && v.member_name, o.mem_phone !== false && v.member_phone];
+    if (o.member  !== false && c.member && (o.mem_name !== false || o.mem_phone !== false))
+      rows.push({key: 'member', lbl: 'Member', val: memParts.filter(Boolean).join(' · ') || '—', accent: true});
     if (o.points  !== false && c.member && (c.member.point != null || c.member.balance != null))
       rows.push({key: 'points', lbl: 'Points / Balance', val: [c.member.point != null ? c.member.point + ' pts' : '', v.balance].filter(Boolean).join(' · ')});
     extras('meta', o).forEach(e => {
@@ -822,7 +827,8 @@ body{font-family:-apple-system,Arial,sans-serif;font-size:13px;color:#18181b;bac
 .inv-title h1{font-size:24px;font-weight:800;letter-spacing:.5px;text-align:right}
 .inv-title .inv-no{font-size:11px;color:#71717a;text-align:right;margin-top:6px;font-family:monospace}
 .inv-title .inv-date{font-size:11px;color:#71717a;text-align:right;margin-top:2px}
-.meta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;padding:10px 12px;background:#f9f9f9;border-radius:6px;border:1px solid #e4e4e7}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;padding:10px 12px;background:#f9f9f9;border-radius:6px;border:1px solid #e4e4e7}
+.meta-item{text-align:center}
 .meta-item .lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#a1a1aa}
 .meta-item .val{font-size:12px;font-weight:600;margin-top:2px}
 table{width:100%;border-collapse:collapse}
