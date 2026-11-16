@@ -470,12 +470,34 @@ window.InvoiceTemplate = (function () {
         : (xm[k] ? extraLine('footer', xm[k], c, {og: 'ft', style: 'font-size:11px;color:#71717a;margin-bottom:12px;'}) : '')).join('');
   }
 
+  // Box around a Text / TextBox block: opts.box picks a preset, opts.box_bg and
+  // opts.box_border (#rrggbb) override its colours. The presets copy boxes the
+  // invoice already has: gray = Info Fields, slate = TextBox / Additional Remark,
+  // highlight = Transaction Remark. Colours are checked against HEX because
+  // they go straight into a style attribute.
+  const BOX_PRESETS = {gray: ['#f9f9f9', '#e4e4e7'], slate: ['#f8fafc', '#cbd5e1'],
+                       highlight: ['#fffbeb', '#fcd34d'], outline: ['#ffffff', '#d4d4d8']};
+  const BOX_DEFAULT = {text: 'none', input: 'slate'};   // = how each looked before boxes were configurable
+  const HEX = /^#[0-9a-f]{6}$/i;
+  const boxKind = (type, o) => (o && (o.box === 'none' || BOX_PRESETS[o.box])) ? o.box : BOX_DEFAULT[type] || 'none';
+  function boxStyle(type, o) {
+    const k = boxKind(type, o);
+    if (k === 'none') return '';
+    const [bg, bd] = BOX_PRESETS[k];
+    return `padding:10px 12px;border-radius:6px;background:${HEX.test(o.box_bg || '') ? o.box_bg : bg};` +
+           `border:1px solid ${HEX.test(o.box_border || '') ? o.box_border : bd};`;
+  }
+
+  // Text colour: opts.color (#rrggbb) wins; otherwise the old Gray toggle
+  // (opts.muted), which templates saved before the colour picker still carry.
+  const textColor = o => HEX.test(o.color || '') ? o.color : (o.muted ? '#71717a' : '#18181b');
+
   function renderText(o, c) {
     const sz = {sm: '11px', md: '13px', lg: '18px'}[o.size || 'md'] || '13px';
     const st = `font-size:${sz};text-align:${o.align || 'left'};` +
       `${o.bold ? 'font-weight:700;' : ''}${o.italic ? 'font-style:italic;' : ''}` +
-      `color:${o.muted ? '#71717a' : '#18181b'};line-height:1.7`;
-    return `<div style="${st}">${subst(o.text, c.vars)}</div>`;
+      `color:${textColor(o)};line-height:1.7`;
+    return `<div style="${boxStyle('text', o)}${st}">${subst(o.text, c.vars)}</div>`;
   }
 
   // TextBox: the admin sets the title in /admin; the merchant types the content
@@ -491,7 +513,7 @@ window.InvoiceTemplate = (function () {
       : '';
     const body = content ? esc(content).replace(/\n/g, '<br>')
       : (c.edit ? `<span style="color:#a1a1aa;font-style:italic">${esc(title || 'TextBox')} — filled in on the Report page</span>` : '');
-    return `<div style="padding:10px 12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;color:#334155">${titleHtml}${body}</div>`;
+    return `<div style="${boxStyle('input', o)}font-size:12px;color:#334155">${titleHtml}${body}</div>`;
   }
 
   function renderBlock(b, c) {
@@ -885,5 +907,6 @@ ${!opts.edit && opts.autoprint ? `<script>window.onload=function(){window.print(
   }
 
   return {build, defaultBlocks, normalizeBlocks, BLOCK_NAMES, PLACEHOLDERS, BLOCK_ELEMENTS,
-          BLOCK_FIELDS, FIELD_GROUPS, fieldOrder, fieldGroup, EXTRA_DATA, EXTRA_GROUP, extras, extraKey, extraLabel};
+          BLOCK_FIELDS, FIELD_GROUPS, fieldOrder, fieldGroup, EXTRA_DATA, EXTRA_GROUP, extras, extraKey, extraLabel,
+          BOX_PRESETS, boxKind, textColor};
 })();

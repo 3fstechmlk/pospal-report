@@ -255,6 +255,9 @@ td.num-r{text-align:right;font-weight:600;font-size:12px}
 .ir-mini{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap}
 .ir-mini select,.ir-mini input[type=number]{border:1px solid var(--bd);border-radius:6px;padding:4px 6px;font-size:11px;background:var(--wh);outline:none}
 .ir-mini input[type=number]{width:64px}
+.ir-box-pick{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--gy);cursor:pointer}
+.ir-box-pick input[type=color]{width:26px;height:22px;padding:1px;border:1px solid var(--bd);border-radius:5px;background:var(--wh);cursor:pointer}
+.ir-box-pick .ir-chip-x{padding:0 2px}
 .ir-mini .tbtn{border:1px solid var(--bd);border-radius:6px;background:var(--wh);padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;color:var(--gy)}
 .ir-mini .tbtn.on{background:var(--dk);color:#fff;border-color:var(--dk)}
 .ir-blk textarea{width:100%;border:1px solid var(--bd);border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;resize:vertical;min-height:52px;outline:none;margin-top:6px}
@@ -694,7 +697,7 @@ input.search{flex:1 1 100%;width:auto;padding:9px 12px}
 
 <div class="toast" id="toast"></div>
 
-<script src="/invoice-template.js?v=21"></script>
+<script src="/invoice-template.js?v=23"></script>
 <script>
 // ── Stale session → out ─────────────────────────────────────────────────
 // Admin sessions live in the server's memory too, so a restart invalidates the
@@ -1920,8 +1923,10 @@ function irCardBody(b) {
         </select>
         <button class="tbtn ${o.bold ? 'on' : ''}" onclick="irToggle('${b.id}','bold',this)">B</button>
         <button class="tbtn ${o.italic ? 'on' : ''}" style="font-style:italic" onclick="irToggle('${b.id}','italic',this)">I</button>
-        <button class="tbtn ${o.muted ? 'on' : ''}" onclick="irToggle('${b.id}','muted',this)">Gray</button>
+        <label class="ir-box-pick" title="Text colour">Color<input type="color" value="${InvoiceTemplate.textColor(o)}" oninput="irTextColor('${b.id}',this.value)" onchange="renderIrBlocks()">${
+          (o.color || o.muted) ? `<button class="ir-chip-x" title="Back to the default colour (black)" onclick="event.preventDefault();irTextColor('${b.id}',null)">×</button>` : ''}</label>
       </div>
+      ${irBoxControls(b)}
       <div class="ir-mini"><select onchange="irInsertVar('${b.id}',this)" style="width:100%">
         <option value="">＋ Insert variable…</option>
         ${InvoiceTemplate.PLACEHOLDERS.map(p => `<option value="{${p}}">{${p}}</option>`).join('')}
@@ -1937,6 +1942,7 @@ function irCardBody(b) {
     case 'input':
       return `<div class="ir-row" style="gap:4px"><label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gy)">Title</label>
         <input type="text" placeholder="e.g. Delivery Address" value="${esc(o.title || '')}" oninput="irOpt('${b.id}','title',this.value)" style="width:100%;border:1px solid var(--bd);border-radius:6px;padding:6px 8px;font-size:12px;outline:none"></div>
+      ${irBoxControls(b)}
       <div class="ir-hint" style="margin-top:6px">The merchant fills in the content on the Report page (a default they can edit per invoice). Empty content hides this box.</div>`;
     default:
       return '';
@@ -1995,6 +2001,43 @@ function irMove(from, to) {
   if (from === to || from + 1 === to) { renderIrBlocks(); return; }
   const [b] = irBlocks.splice(from, 1);
   irBlocks.splice(to > from ? to - 1 : to, 0, b);
+  renderIrBlocks(); updateIrPreview();
+}
+
+// Box around a Text / TextBox block: preset dropdown, then background / border
+// colour pickers (start from the preset's colours; × goes back to the preset).
+function irBoxControls(b) {
+  const T = InvoiceTemplate, o = b.opts, kind = T.boxKind(b.type, o);
+  const names = {none: 'No box', gray: 'Gray', slate: 'Blue-gray', highlight: 'Highlight (yellow)', outline: 'Outline'};
+  const sel = `<select onchange="irBoxSet('${b.id}',this.value)" title="Box around this block">${
+    Object.keys(names).map(k => `<option value="${k}"${k === kind ? ' selected' : ''}>Box: ${names[k]}</option>`).join('')}</select>`;
+  if (kind === 'none') return `<div class="ir-mini">${sel}</div>`;
+  const hex = /^#[0-9a-f]{6}$/i, preset = T.BOX_PRESETS[kind];
+  const pick = (key, i, lbl) => {
+    const custom = hex.test(o[key] || '');
+    return `<label class="ir-box-pick" title="${lbl} colour">${lbl}<input type="color" value="${custom ? o[key] : preset[i]}" oninput="irOpt('${b.id}','${key}',this.value)" onchange="renderIrBlocks()">${
+      custom ? `<button class="ir-chip-x" title="Back to the preset colour" onclick="event.preventDefault();irBoxColor('${b.id}','${key}')">×</button>` : ''}</label>`;
+  };
+  return `<div class="ir-mini">${sel}</div><div class="ir-mini" style="gap:14px">${pick('box_bg', 0, 'Fill')}${pick('box_border', 1, 'Border')}</div>`;
+}
+// Text block colour. Replaces the old Gray toggle, so 'muted' is cleared either
+// way; null = back to the default black.
+function irTextColor(id, v) {
+  const b = irBlk(id); if (!b) return;
+  delete b.opts.muted;
+  if (v) b.opts.color = v; else delete b.opts.color;
+  if (!v) renderIrBlocks();
+  updateIrPreview();
+}
+function irBoxSet(id, kind) {
+  const b = irBlk(id); if (!b) return;
+  b.opts.box = kind;
+  delete b.opts.box_bg; delete b.opts.box_border;   // a new preset starts from its own colours
+  renderIrBlocks(); updateIrPreview();
+}
+function irBoxColor(id, key) {
+  const b = irBlk(id); if (!b) return;
+  delete b.opts[key];
   renderIrBlocks(); updateIrPreview();
 }
 

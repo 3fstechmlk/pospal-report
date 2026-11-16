@@ -2,6 +2,20 @@
 
 ---
 
+## v1.8.1 — 2026-11-16
+
+### Improved
+- **Boxes around Text and TextBox.** In Edit Report, a Text or TextBox block
+  now has a **Box** setting: No box, Gray, Blue-gray, Highlight (yellow) or
+  Outline. With a box chosen, **Fill** and **Border** let you pick any colour;
+  **×** goes back to the box's own colour. Existing invoices look the same as
+  before (Text has no box, TextBox keeps its blue-gray box).
+- **Any colour for Text.** The Text block's **Gray** button is now a **Color**
+  picker, so the text can be any colour; **×** goes back to black. Text that
+  was set to Gray stays gray.
+
+---
+
 ## v1.8.0 — 2026-11-16
 
 ### New
